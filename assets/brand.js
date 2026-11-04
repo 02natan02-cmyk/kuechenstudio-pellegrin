@@ -78,7 +78,20 @@
       tiles.forEach(function (t, i) { var d = Math.hypot(i % cols - fx, Math.floor(i / cols) - fy); t.classList.remove('w'); void t.offsetWidth; t.style.setProperty('--w', Math.round(d * 55) + 'ms'); t.classList.add('w'); });
     }
     function count() { if (!n || RM) return; var to = +n.dataset.bwN, t0 = performance.now(); (function f(now) { var k = Math.min(1, (now - t0) / 1600); n.textContent = Math.round(to * (1 - Math.pow(1 - k, 4))); if (k < 1) requestAnimationFrame(f); })(t0); }
-    function go() { sec.classList.add('in'); count(); if (!RM) setTimeout(function () { if (!wall.classList.contains('t')) wave(0); }, 1500); }
+    const nk = wall ? +wall.dataset.nk || 0 : 0;
+    let flipT = 0;
+    function flips() {
+      if (!nk || RM) return;
+      tiles.forEach(t => { const k = t.querySelector('.bw-k'); if (k && !k.style.backgroundImage) k.style.backgroundImage = 'url(img/bw/k' + String(1 + Math.floor(Math.random() * nk)).padStart(2, '0') + '.webp)'; });
+      const step = () => { if (document.hidden) { flipT = setTimeout(step, 1500); return; }
+        const n = 2 + Math.floor(Math.random() * 2), used = new Set();
+        for (let j = 0; j < n; j++) { let i; do { i = Math.floor(Math.random() * tiles.length); } while (used.has(i)); used.add(i); const t = tiles[i];
+          const k = t.querySelector('.bw-k'); k.style.backgroundImage = 'url(img/bw/k' + String(1 + Math.floor(Math.random() * nk)).padStart(2, '0') + '.webp)';
+          setTimeout(() => t.classList.add('fl'), j * 160); setTimeout(() => t.classList.remove('fl'), 2300 + j * 160); }
+        flipT = setTimeout(step, 1500 + Math.random() * 900); };
+      step();
+    }
+    function go() { sec.classList.add('in'); count(); setTimeout(flips, 2600); if (!RM) setTimeout(function () { if (!wall.classList.contains('t')) wave(0); }, 1500); }
     if (!('IntersectionObserver' in window) || RM) sec.classList.add('in');
     else new IntersectionObserver(function (es, o) { if (es[0].isIntersecting) { o.disconnect(); go(); } }, { threshold: .35 }).observe(sec);
     if (wall) wall.addEventListener('click', function (e) { var i = tiles.indexOf(e.target); wall.classList.add('t'); if (!RM) wave(i < 0 ? Math.floor(tiles.length / 2) : i); });
@@ -88,15 +101,15 @@
 /* Nolte & Schüller: Lichtleiste ziehen, Neuheiten antippen, Bilder wechseln, Messband */
 (() => {
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.querySelectorAll('[data-hs-q]').forEach(q => {
-    const mm = q.querySelector('[data-hs-mm]');
+  document.querySelectorAll('[data-nsh-q]').forEach(q => {
+    const mm = q.querySelector('[data-nsh-mm]');
     const go = () => { q.classList.add('in'); if (!mm) return; if (RM) { mm.textContent = '0,0'; return; }
       const t0 = performance.now(); (function f(t) { const k = Math.min(1, (t - t0) / 2200), v = 3 * Math.pow(1 - k, 3); mm.textContent = v.toFixed(1).replace('.', ','); if (k < 1) requestAnimationFrame(f); })(t0); };
     if (!('IntersectionObserver' in window)) return go();
     new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); go(); } }, { threshold: .5 }).observe(q);
   });
-  const sec = document.querySelector('[data-hs]'); if (!sec) return;
-  const st = sec.querySelector('[data-hs-stage]'), bar = sec.querySelector('[data-hs-bar]');
+  const sec = document.querySelector('[data-nsh]'); if (!sec) return;
+  const st = sec.querySelector('[data-nsh-stage]'), bar = sec.querySelector('[data-nsh-bar]');
   let x = 50, user = false;
   const set = (v, from) => { x = Math.max(8, Math.min(92, v)); st.style.setProperty('--x', x + '%'); bar.setAttribute('aria-valuenow', Math.round(x));
     const lean = x > 60 ? 'l' : x < 40 ? 'r' : ''; lean ? st.setAttribute('data-lean', lean) : st.removeAttribute('data-lean');
@@ -113,19 +126,19 @@
   st.addEventListener('pointerup', end); st.addEventListener('pointercancel', () => { drag = false; st.classList.remove('drag'); });
   bar.addEventListener('keydown', e => { const k = { ArrowLeft: -6, ArrowRight: 6, Home: -100, End: 100 }[e.key]; if (k == null) return; e.preventDefault(); user = true; set(k === -100 ? 8 : k === 100 ? 92 : x + k); });
   // Bilder je Seite langsam wechseln
-  const cycle = side => { const ps = [...side.querySelectorAll('.hs-p')]; if (ps.length < 2) return; let k = ps.findIndex(p => p.classList.contains('on')); ps[k].classList.remove('on'); ps[(k + 1) % ps.length].classList.add('on'); };
+  const cycle = side => { const ps = [...side.querySelectorAll('.nsh-p')]; if (ps.length < 2) return; let k = ps.findIndex(p => p.classList.contains('on')); ps[k].classList.remove('on'); ps[(k + 1) % ps.length].classList.add('on'); };
   const sides = { nolte: sec.querySelector('[data-side="nolte"]'), schueller: sec.querySelector('[data-side="schueller"]') };
   let pause = 0;
   setInterval(() => { if (document.hidden || Date.now() < pause) return; cycle(sides.nolte); setTimeout(() => cycle(sides.schueller), 1800); }, 6400);
   // Neuheit antippen: Seite öffnet sich, passendes Bild erscheint
   const IMG = 'img/hs/';
-  sec.querySelectorAll('.hs-n').forEach(b => b.addEventListener('click', () => {
+  sec.querySelectorAll('.nsh-n').forEach(b => b.addEventListener('click', () => {
     user = true; pause = Date.now() + 12000; st.classList.remove('cue');
-    sec.querySelectorAll('.hs-n').forEach(o => o.classList.toggle('on', o === b));
+    sec.querySelectorAll('.nsh-n').forEach(o => o.classList.toggle('on', o === b));
     const side = sides[b.dataset.b], key = b.dataset.k;
-    let p = side.querySelector('.hs-p[data-k="' + key + '"]');
-    if (!p) { p = document.createElement('picture'); p.className = 'hs-p'; p.dataset.k = key; p.innerHTML = '<source media="(max-width: 760px)" srcset="' + IMG + key + '_m.webp"><img src="' + IMG + key + '.webp" alt="' + b.querySelector('b').textContent + '" decoding="async">'; side.insertBefore(p, side.querySelector('.hs-src')); }
-    const show = () => { side.querySelectorAll('.hs-p').forEach(o => o.classList.toggle('on', o === p)); };
+    let p = side.querySelector('.nsh-p[data-k="' + key + '"]');
+    if (!p) { p = document.createElement('picture'); p.className = 'nsh-p'; p.dataset.k = key; p.innerHTML = '<source media="(max-width: 760px)" srcset="' + IMG + key + '_m.webp"><img src="' + IMG + key + '.webp" alt="' + b.querySelector('b').textContent + '" decoding="async">'; side.insertBefore(p, side.querySelector('.nsh-src')); }
+    const show = () => { side.querySelectorAll('.nsh-p').forEach(o => o.classList.toggle('on', o === p)); };
     const im = p.querySelector('img'); im.complete ? requestAnimationFrame(show) : im.addEventListener('load', show, { once: true });
     set(b.dataset.b === 'nolte' ? 78 : 22);
     if (innerWidth < 760) st.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'center' });
@@ -137,4 +150,17 @@
       setTimeout(() => { if (!user) st.classList.add('cue'); }, 3500); setTimeout(() => st.classList.remove('cue'), 9000);
     }, { threshold: .45 }).observe(st);
   }
+})();
+
+/* Handy-Menü: Escape schließt */
+addEventListener('keydown', e => { if (e.key !== 'Escape') return; const b = document.querySelector('.burger[aria-expanded="true"]'); if (b) { b.click(); b.focus(); } });
+/* Fragen & Antworten: Schubladen fahren ein, die erste öffnet sich von selbst */
+(() => {
+  const sec = document.querySelector('[data-fq]'); if (!sec) return;
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches, items = [...sec.querySelectorAll('.fq-i')];
+  items.forEach(d => d.addEventListener('toggle', () => { if (d.open) { items.forEach(o => { if (o !== d && o.open && o.dataset.auto) o.open = false; }); } }));
+  ['pointerdown', 'keydown'].forEach(t => sec.addEventListener(t, () => sec.classList.add('touched'), { once: true }));
+  const go = () => { sec.classList.add('in'); if (RM) { items[0].open = true; return; } setTimeout(() => { if (!sec.classList.contains('touched') && items[0]) { items[0].dataset.auto = '1'; items[0].open = true; } }, 900 + items.length * 70); };
+  if (!('IntersectionObserver' in window)) return go();
+  new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); go(); } }, { threshold: .25 }).observe(sec);
 })();

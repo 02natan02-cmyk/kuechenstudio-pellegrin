@@ -21,6 +21,8 @@
   const SAMPLE = { src: 'img/ki/vorher.webp', pts: [[.189, .628], [.534, .574], [.812, .828], [.151, .958]], mm: 26, face: 'W',
     plan: { f: 'zeile', r: { w: 400, d: 270 }, rw: { N: [['kue', 60], ['bo', 60], ['kf', 80], ['s2', 60], ['sp', 80], ['gs', 60]] }, tp: { N: 1 }, op: [['fenster', 'W', 75, 120], ['tuer', 'S', 20, 90]], is: { w: 180, v: 'kochfeld' }, s: { front: '#f1eee8', wood: null, handle: 'grifflos', top: 'eiche', finish: 'matt', wall: '#f3efe9', floor: 'eiche' }, ah: 90 } };
   const DEF_PTS = [[.3, .58], [.7, .58], [.94, .9], [.06, .9]];
+  // Freie Platzierung (ohne Bodenpunkte): angenommener Boden aus dem Regler „Blickwinkel“ (0 = gerade, 1 = von oben)
+  const freePts = t => { const y = .5 + .14 * t, w = .2 + .07 * t; return [[.5 - w, y], [.5 + w, y], [.97, .93], [.03, .93]]; };
   const PN = ['hinten links', 'hinten rechts', 'vorne rechts', 'vorne links'];
   const WN = { N: 'Rückwand', E: 'rechte Wand', S: 'vordere Wand', W: 'linke Wand' };   // Namen wie im Grundriss des Planers
   // kleine Vektorrechnung
@@ -34,7 +36,7 @@
 
   let demo = null; const room = () => demo ? demo.room : KP.room(), st3 = () => demo ? demo.state : KP.state3d();
   let el, stage, fit, img, host, ov, loupe, K = null, ph = null, pts = null, face = 'N', faceManual = false, mm = 26, mmSrc = 'std', rig = { x: 0, z: 0, ry: 0, s: 1 }, expo = 1;
-  let mode = 'view', cmpOn = false, cmp = 50, pose = null, backEl = null, shareOk = false, det = null, fp = null, snapW = new Set(), dragUI = false, flashT = 0, anim = 0, light = null, noRoom = false;
+  let free = false, tilt = .45, mode = 'view', cmpOn = false, cmp = 50, pose = null, backEl = null, shareOk = false, det = null, fp = null, snapW = new Set(), dragUI = false, flashT = 0, anim = 0, light = null, noRoom = false;
 
   /* ---------------- Oberfläche ---------------- */
   const ICO = {
@@ -90,7 +92,7 @@
         <button type="button" class="kpf-tool" data-act="rot">${ICO.rot}<span>Drehen</span></button>
         <button type="button" class="kpf-tool" data-act="home">${ICO.home}<span>An den Platz</span></button>
         <button type="button" class="kpf-tool" data-act="cmp" aria-pressed="false">${ICO.cmp}<span>Vorher / Nachher</span></button>
-        <button type="button" class="kpf-tool" data-act="align">${ICO.pts}<span>Boden anpassen</span></button>
+        <button type="button" class="kpf-tool" data-act="align">${ICO.pts}<span>Feinjustieren</span></button>
       </div>
       <div class="kpf-wall">
         <p class="kpf-wq">Welche Wand sehen Sie <b>hinten</b> im Foto? <span>Antippen zum Ändern.</span></p>
@@ -98,6 +100,10 @@
         <p class="kpf-wsel" data-wsel></p>
       </div>
       <p class="kpf-sn" data-samplenote hidden>Beispielfoto mit einer Beispielküche an der rechten Wand. Mit Ihrem eigenen Foto erscheint dort Ihre eigene Planung.</p>
+      <div class="kpf-free" data-freebox hidden>
+        <label class="kpf-rg"><span>Blickwinkel</span><output data-o="tl"></output><input type="range" min="0" max="100" step="1" data-r="tl" aria-label="Blickwinkel: gerade bis von oben"></label>
+        <label class="kpf-rg"><span>Größe</span><output data-o="sz"></output><input type="range" min="30" max="260" step="1" data-r="sz" aria-label="Größe der Küche im Foto"></label>
+      </div>
       <label class="kpf-rg"><span>Helligkeit der Küche</span><output data-o="ex"></output><input type="range" min="60" max="150" step="1" data-r="ex"></label>
     </section>
     <section class="kpf-pane" data-pane="align" hidden>
@@ -127,11 +133,11 @@
     ['dragleave', 'drop'].forEach(t => stage.addEventListener(t, () => stage.classList.remove('over')));
     stage.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); loadFile(f); });
     $$('[data-act]', el).forEach(b => b.addEventListener('click', () => act(b.dataset.act)));
-    $('[data-done]', el).addEventListener('click', () => { if (!pose) { flash('Die Punkte passen so noch nicht zusammen – bitte 1 und 2 in die hinteren Ecken ziehen.'); return; } noRoom = false; hideMsg(); setMode('view'); });
+    $('[data-done]', el).addEventListener('click', () => { free = false; if (!pose) { flash('Die Punkte passen so noch nicht zusammen – bitte 1 und 2 in die hinteren Ecken ziehen.'); return; } noRoom = false; hideMsg(); setMode('view'); });
     $('[data-auto]', el).addEventListener('click', () => { if (ph && !ph.sample) analyse(true); else if (ph) { pts = SAMPLE.pts.map(p => p.slice()); update(); } });
     $('[data-reset]', el).addEventListener('click', () => { pts = (ph && ph.sample ? SAMPLE.pts : det && det.pts0 ? det.pts0 : DEF_PTS).map(p => p.slice()); update(); });
     $$('[data-mm]', el).forEach(b => b.addEventListener('click', () => { mm = +b.dataset.mm; mmSrc = 'user'; update(); }));
-    $$('[data-r]', el).forEach(r => r.addEventListener('input', () => { const k = r.dataset.r, v = +r.value; if (k === 'mm') { mm = v; mmSrc = 'user'; } if (k === 'ex') { expo = v / 100; K && K.exposure(expo); } update(); }));
+    $$('[data-r]', el).forEach(r => r.addEventListener('input', () => { const k = r.dataset.r, v = +r.value; if (k === 'mm') { mm = v; mmSrc = 'user'; } if (k === 'ex') { expo = v / 100; K && K.exposure(expo); } if (k === 'tl') { tilt = v / 100; pts = freePts(tilt); } if (k === 'sz') { rig = { ...rig, s: v / 100 }; } update(); }));
     $('[data-save]', el).addEventListener('click', save);
     $('[data-share]', el).addEventListener('click', share);
     $('[data-again]', el).addEventListener('click', () => showEmpty());
@@ -213,7 +219,7 @@
     ph = { cv: c, w: c.width, h: c.height, sample: !!o.sample, mm: o.mm || null, expo: light.expo };
     img.src = c.toDataURL('image/jpeg', .9);
     loupe.style.backgroundImage = `url("${img.src}")`;
-    mm = o.mm || 26; mmSrc = o.sample ? 'sample' : o.mm ? 'exif' : 'std'; rig = { x: 0, z: 0, ry: 0, s: 1 }; expo = ph.expo; cmp = 50; cmpOn = false; snapW = new Set(); det = null; faceManual = false; pose = null;
+    free = false; tilt = .45; mm = o.mm || 26; mmSrc = o.sample ? 'sample' : o.mm ? 'exif' : 'std'; rig = { x: 0, z: 0, ry: 0, s: 1 }; expo = ph.expo; cmp = 50; cmpOn = false; snapW = new Set(); det = null; faceManual = false; pose = null;
     pts = (o.pts || DEF_PTS).map(p => p.slice()); if (o.face) face = o.face;
     busy(false); hideChip(); hideHint(); hideMsg(); noRoom = false; showFit();
     demo = o.sample ? KP.stateOf(SAMPLE.plan) : null;
@@ -251,8 +257,9 @@
       if (manual && mode === 'align') { host.classList.remove('kpf-hide'); update(); chip(`${ICO.ok}<span>Punkte neu gesetzt</span>`, 2200); return; }
       place(false);
     } else {
-      endScan(); host.classList.remove('kpf-hide'); update();
-      showMsg(det.kind === 'outdoor' ? 'outdoor' : 'none');
+      endScan(); host.classList.remove('kpf-hide');
+      if (det.kind === 'outdoor') { update(); showMsg('outdoor'); return; }
+      goFree(true);
     }
   }
   function endScan() { const scan = $('[data-scan]', el); scan.classList.add('done'); setTimeout(() => { scan.hidden = true; scan.classList.remove('on', 'done'); }, RM ? 0 : 450); $('[data-scant]', el).hidden = true; }
@@ -273,7 +280,7 @@
   function place(sample) {
     hideMsg(); noRoom = false; host.classList.remove('kpf-hide'); rig = { x: 0, z: 0, ry: 0, s: 1 }; snapW = new Set(); mode = 'view';
     update();
-    if (!pose) { setMode('align'); chip('<b>Bitte den Boden markieren</b> – die vier Punkte in die Ecken ziehen.', 6000, 'warn'); return; }
+    if (!pose) { goFree(true); return; }
     const k = det && det.kind === 'check' ? 'check' : sample ? 'sample' : 'ok';
     chip(k === 'check' ? '<b>Bitte kurz prüfen:</b> liegt das Raster auf dem Boden? <button type="button" data-chipfix>Anpassen</button>' : k === 'sample' ? `${ICO.ok}<span>Beispielraum vermessen</span>` : `${ICO.ok}<span>Boden und Wände erkannt</span>`, k === 'check' ? 9000 : 3600, k === 'check' ? 'warn' : 'ok');
     flashGrid(1700);
@@ -282,6 +289,13 @@
       const run = now => { const k2 = Math.min(1, (now - t0) / 720); host.style.opacity = Math.min(1, k2 * 1.7); rig.s = .9 + .1 * springy(k2); update(); if (k2 < 1) anim = requestAnimationFrame(run); else { anim = 0; rig.s = 1; host.style.opacity = ''; update(); hint(); } };
       anim = requestAnimationFrame(run);
     } else hint();
+  }
+  function goFree(first) {
+    free = true; pts = freePts(tilt); mode = 'view'; hideMsg(); noRoom = false; host.classList.remove('kpf-hide');
+    rig = { x: 0, z: 0, ry: 0, s: .8 }; snapW = new Set(); update();
+    if (!pose) { tilt = .45; pts = freePts(tilt); update(); }
+    if (first) chip(`${ICO.ok}<span>Ihre Küche steht im Foto – schieben, drehen und größer oder kleiner ziehen</span>`, 4200, 'ok');
+    flashGrid(1200); hint();
   }
   function hint() { const g = $('[data-gest]', el); try { const n = +localStorage.getItem('kpf-gest') || 0; if (n >= 3) return; localStorage.setItem('kpf-gest', String(n + 1)); } catch (e) { } g.hidden = false; void g.offsetWidth; g.classList.add('on'); clearTimeout(hint.t); hint.t = setTimeout(() => { g.classList.remove('on'); setTimeout(() => { g.hidden = true; }, 400); }, 5200); }
   function showMsg(kind) {
@@ -458,14 +472,15 @@
     $$('[data-pane]', el).forEach(p => p.hidden = p.dataset.pane !== mode);
     $$('[data-mm]', el).forEach(b => b.classList.toggle('on', Math.abs(+b.dataset.mm - mm) < 1.5));
     const set = (k, v, t) => { const r = $(`[data-r="${k}"]`, el), o = $(`[data-o="${k}"]`, el); if (r && document.activeElement !== r) r.value = v; if (o) o.textContent = t; };
-    set('mm', Math.round(mm), Math.round(mm) + ' mm'); set('ex', Math.round(expo * 100), Math.round(expo * 100) + ' %');
+    set('mm', Math.round(mm), Math.round(mm) + ' mm'); set('ex', Math.round(expo * 100), Math.round(expo * 100) + ' %'); set('tl', Math.round(tilt * 100), tilt < .3 ? 'gerade' : tilt > .7 ? 'von oben' : 'leicht von oben'); set('sz', Math.round(rig.s * 100), Math.round(rig.s * 100) + ' %');
+    const fb = $('[data-freebox]', el); if (fb) fb.hidden = !free;
     const src = $('[data-mmsrc]', el); if (src && ph) src.textContent = mmSrc === 'exif' ? `Aus den Foto-Daten erkannt: ${Math.round(ph.mm)} mm (Kleinbild).` : mmSrc === 'auto' ? `Aus den Raumfluchten geschätzt: ${Math.round(mm)} mm.` : mmSrc === 'sample' ? 'Beispielfoto: normales Handy-Objektiv (1×).' : mmSrc === 'user' ? '' : 'Unbekannt – angenommen: normales Handy-Objektiv (1×).';
     fit.classList.toggle('al', mode === 'align'); fit.classList.toggle('cmp', cmpOn); fit.classList.toggle('mv', mode === 'view' && !cmpOn && !!pose);
     const smp = !!(ph && ph.sample); $('[data-samplenote]', el).hidden = !smp; $('[data-attach]', el).hidden = smp; $('[data-own]', el).hidden = !smp;
     $('[data-cmpl]', el).hidden = !cmpOn;
     const cb = $('[data-act="cmp"]', el); if (cb) { cb.setAttribute('aria-pressed', cmpOn); cb.classList.toggle('on', cmpOn); }
     const lead = $('[data-lead]', el);
-    if (lead) lead.innerHTML = !pose || noRoom ? 'Der Boden ist noch nicht markiert – tippen Sie auf <b>Boden anpassen</b> und ziehen Sie vier Punkte in die Ecken.' : cmpOn ? '<b>Ziehen Sie den Regler im Bild:</b> links Ihr Raum heute, rechts mit Ihrer geplanten Küche.' : TOUCH ? '<b>Ihre geplante Küche steht in Ihrem Raum.</b> Mit einem Finger verschieben, mit zwei Fingern drehen – an den Wänden rastet sie ein.' : '<b>Ihre geplante Küche steht in Ihrem Raum.</b> Ziehen verschiebt sie, mit ↻ drehen Sie sie – an den Wänden rastet sie ein.';
+    if (lead) lead.innerHTML = free && pose ? (TOUCH ? '<b>Ihre Küche steht in Ihrem Foto.</b> Mit einem Finger verschieben, mit zwei Fingern drehen und größer oder kleiner ziehen. Passt der Boden nicht ganz? Regler <b>Blickwinkel</b>.' : '<b>Ihre Küche steht in Ihrem Foto.</b> Ziehen verschiebt sie, ↻ dreht sie, das Mausrad macht sie größer oder kleiner. Passt der Boden nicht ganz? Regler <b>Blickwinkel</b>.') : !pose || noRoom ? 'Der Boden ist noch nicht markiert – tippen Sie auf <b>Feinjustieren</b>.' : cmpOn ? '<b>Ziehen Sie den Regler im Bild:</b> links Ihr Raum heute, rechts mit Ihrer geplanten Küche.' : TOUCH ? '<b>Ihre geplante Küche steht in Ihrem Raum.</b> Mit einem Finger verschieben, mit zwei Fingern drehen – an den Wänden rastet sie ein.' : '<b>Ihre geplante Küche steht in Ihrem Raum.</b> Ziehen verschiebt sie, mit ↻ drehen Sie sie – an den Wänden rastet sie ein.';
     ['rot', 'home', 'cmp'].forEach(k => { const b = $(`[data-act="${k}"]`, el); if (b) b.disabled = !pose || noRoom; });
     drawPlan(); applyCmp(); placeRot();
   }
@@ -504,6 +519,7 @@
   // Rohwert → mit Wandanschlag und Einrasten (Hysterese: was eingerastet ist, bleibt es ein Stück länger).
   // Eingerastet wird nur mit dem Rücken der Küche – nie mit den Fronten an die Wand.
   function constrain(r0) {
+    if (free) { const r = { ...r0 }, q = Math.round(r.ry / H90) * H90; if (Math.abs(r.ry - q) < AS) r.ry = q; r.s = clamp(r.s, .3, 2.6); return r; }
     const r = { ...r0 }, W = fp ? fp.W : 0, D = fp ? fp.D : 0;
     const q = Math.round(r.ry / H90) * H90, aligned = Math.abs(r.ry - q) < AS; if (aligned) r.ry = q;
     if (Math.abs(r.s - 1) < .025) r.s = 1;
@@ -546,6 +562,7 @@
     return best;
   }
   function settleDrop() {
+    if (free) return false;
     const s0 = smartSnap(); if (!s0) return false;
     const moved = Math.hypot(s0.r.x - rig.x, s0.r.z - rig.z) > .005 || Math.abs(s0.r.ry - rig.ry) > .002;
     const added = s0.walls.filter(k => !snapW.has(k)); snapW = new Set(s0.walls); tween(s0.r, s0.d ? 420 : 260);
@@ -590,7 +607,7 @@
       if (!P.has(e.pointerId)) return; P.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const r = { ...g0.r0 };
       if (g0.kind === 'two' && P.size === 2) {
-        const t = two(); r.ry = g0.r0.ry - (t.a - g0.a); r.s = clamp(g0.r0.s * t.d / Math.max(1, g0.d), .85, 1.15);
+        const t = two(); r.ry = g0.r0.ry - (t.a - g0.a); r.s = clamp(g0.r0.s * t.d / Math.max(1, g0.d), free ? .3 : .85, free ? 2.6 : 1.15);
         const f = floorAt(t.mx, t.my); if (f && g0.f) { r.x += f.x - g0.f.x; r.z += f.z - g0.f.z; }
       } else if (g0.kind === 'rot') r.ry = g0.r0.ry + (e.clientX - g0.x) * .008;
       else if (g0.kind === 'move' && g0.f) { const f = floorAt(e.clientX, e.clientY); if (f) { r.x += f.x - g0.f.x; r.z += f.z - g0.f.z; } }
@@ -609,7 +626,7 @@
     };
     fit.addEventListener('pointerup', end); fit.addEventListener('pointercancel', end);
     fit.addEventListener('contextmenu', e => { if (mode === 'view' && pose) e.preventDefault(); });
-    fit.addEventListener('wheel', e => { if (mode !== 'view' || !pose || cmpOn) return; e.preventDefault(); dragUI = true; rig = constrain({ ...rig, s: clamp(rig.s * Math.exp(-e.deltaY * .0012), .85, 1.15) }); update(); flashGrid(700); }, { passive: false });
+    fit.addEventListener('wheel', e => { if (mode !== 'view' || !pose || cmpOn) return; e.preventDefault(); dragUI = true; rig = constrain({ ...rig, s: clamp(rig.s * Math.exp(-e.deltaY * .0012), free ? .3 : .85, free ? 2.6 : 1.15) }); update(); flashGrid(700); }, { passive: false });
     // Tastatur (Fokus auf dem Bild): Pfeile schieben, Q/E drehen
     fit.tabIndex = 0; fit.setAttribute('aria-label', 'Küche im Foto – Pfeiltasten verschieben, Q und E drehen');
     fit.addEventListener('keydown', e => {

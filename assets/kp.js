@@ -89,7 +89,7 @@
     nolte: [['Weiß softmatt', '#f1f0eb'], ['Magnolia', '#ece4d3'], ['Avocado', '#7e8b64'], ['Quarzgrau', '#7c7e7f'], ['Schwarzgrün', '#2c3530']],
     schueller: [['Kristallweiß matt', '#f3f3f0'], ['Muschelweiß matt', '#ebe5d8'], ['Kaschmirbraun', '#b8a58f'], ['Kieselgrau', '#b3afa7'], ['Sandgelb', '#d8c38e'], ['Eukalyptusgrün', '#8fa293'], ['Stahlblau', '#6f8597'], ['Tiefblau matt', '#26344a'], ['Sepiabraun', '#6c5443'], ['Orientrot', '#9a3b2f'], ['Lavaschwarz matt', '#2a2a2b']] };
   const HERSTN = { nobilia: 'nobilia', nolte: 'Nolte', schueller: 'Schüller' };
-  const HERSTWOOD = { eiche: 'Holzdekore z. B. nobilia „Eiche San Remo“, Schüller „Eiche Skagen“', nuss: 'Nussbaum: passendes Holzdekor im Studio wählen' };
+  const HERSTWOOD = { eiche: 'Holzdekore zum Beispiel Nolte „MANHATTAN Eiche Cognac“, Schüller „Eiche Skagen“', nuss: 'Nussbaum: passendes Holzdekor im Studio wählen' };
   const labC = h => { const L = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v > .04045 ? Math.pow((v + .055) / 1.055, 2.4) : v / 12.92); const f = t => t > .008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; const x = f((L[0] * .4124 + L[1] * .3576 + L[2] * .1805) / .95047), y = f(L[0] * .2126 + L[1] * .7152 + L[2] * .0722), z = f((L[0] * .0193 + L[1] * .1192 + L[2] * .9505) / 1.08883); return [116 * y - 16, 500 * (x - y), 200 * (y - z)]; };
   const dE = (a, b) => { const p = labC(a), q = labC(b); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
   const isHex = v => /^#[0-9a-f]{6}$/i.test(v || '');
@@ -1925,6 +1925,11 @@
   /* ---------------- Ihre Küche in Ihrem Raum (Foto-Projektion, wird bei Bedarf geladen) ---------------- */
   let pf = null;
   function loadFoto() { return pf || (pf = Promise.all([loadEngine(), new Promise((res, rej) => { if (window.KPF) return res(); const s = document.createElement('script'); s.src = 'assets/kp-foto.js?v=' + VER; s.onload = res; s.onerror = rej; document.head.appendChild(s); })])); }
+  // Live im Raum (AR): wird erst beim Antippen geladen
+  let par = null;
+  function openAR() { (par || (par = new Promise((res, rej) => { if (window.KPAR) return res(); const s = document.createElement('script'); s.src = 'assets/kp-ar.js?v=' + VER; s.onload = res; s.onerror = () => { par = null; rej(); }; document.head.appendChild(s); }))).then(() => window.KPAR.open()).catch(() => toast('Die Live-Ansicht konnte nicht geladen werden – bitte Seite neu laden.')); }
+  document.addEventListener('click', e => { const b = e.target.closest('[data-kpar-open]'); if (!b) return; e.preventDefault(); openAR(); });
+  if (/[?&]ar=1/.test(location.search)) setTimeout(openAR, 1200);
   function openFoto(o) { loadFoto().then(() => window.KPF && window.KPF.open(o || {})).catch(() => { pf = null; toast('Die Foto-Ansicht konnte nicht geladen werden – bitte Seite neu laden.'); }); }
   window.KP = {
     state3d: () => toState(), room: () => ({ ...P.room }),

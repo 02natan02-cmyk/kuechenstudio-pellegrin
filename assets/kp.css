@@ -275,6 +275,9 @@ html[data-page="planer"] .concept{display:none}
 .kp-acts svg{width:18px;height:18px;flex:none}
 .kp-acts .kp-doorb.on{background:var(--ink);color:#fff}
 .kp-acts .kp-fotob{background:var(--copper);color:#fff;box-shadow:0 10px 24px -10px var(--copper)}
+.kp-acts .kp-arb{background:var(--ink);color:#fff;box-shadow:0 10px 24px -12px rgba(0,0,0,.6);position:relative}
+.kp-acts .kp-arb::before{content:"";position:absolute;inset:-3px;border-radius:999px;border:2px solid var(--copper);opacity:0;animation:kpArPing 2.6s ease-out 3s 3}
+@keyframes kpArPing{0%{opacity:.8;transform:scale(.96)}100%{opacity:0;transform:scale(1.18)}}
 .kp-acts button:focus-visible,.kp-cams button:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
 @media (max-width:999px){
   .kp-acts{left:auto;right:8px;bottom:auto;top:8px;flex-direction:column;align-items:flex-end;gap:5px}
@@ -537,7 +540,7 @@ html.kpf-on,html.kpf-on body{overflow:hidden}
 }
 @media (max-width:600px){
   .kp-live{font-size:0;gap:6px;padding:6px 10px}.kp-live b{display:none}.kp-live::after{content:'live in 3D';font:600 11.5px var(--sans)}
-  .kp-fotob span{font-size:0}.kp-fotob span::after{content:'In Ihren Raum';font-size:11.5px}
+  .kp-fotob span{font-size:0}.kp-fotob span::after{content:'In Ihren Raum';font-size:11.5px}.kp-arb span::after{content:'Live im Raum'}
   .kp-pop.kp-pop-eq{padding:10px}
   .kp-eqrow{grid-template-columns:1fr}.kp-eqrow>.kp-pl{padding-top:0}
 }
