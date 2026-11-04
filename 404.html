@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Seite nicht gefunden · Küchenstudio Pellegrin</title>
+<title>Hier wird noch montiert · Küchenstudio Pellegrin</title>
 <meta name="description" content="Diese Adresse gibt es nicht mehr oder sie wurde verschoben. Weiter zum Küchenplaner, zur Ausstellung oder zur Startseite von Küchenstudio Pellegrin.">
 <meta name="robots" content="noindex, follow">
 <meta name="theme-color" content="#f6f1e9">
@@ -45,6 +45,10 @@ a{color:inherit}
 @keyframes dust{50%{transform:translate(10px,-14px)}}
 .cab.wig img{animation:wig .55s}
 @keyframes wig{30%{transform:scale(1.035) translateY(.6%)}60%{transform:scale(1.01)}}
+.cab .tape{position:absolute;left:-12%;right:-12%;top:12%;transform:rotate(-8deg);background:repeating-linear-gradient(135deg,#f2d64b 0 22px,#2a2823 22px 44px);padding:5px 0;box-shadow:0 8px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .6s 1.4s;pointer-events:none;overflow:hidden}
+.cab.open .tape{opacity:1}
+.cab .tape span{display:inline-block;white-space:nowrap;background:#f6f1e3;color:#2a2823;font:700 12px "DM Sans";letter-spacing:.16em;text-transform:uppercase;padding:5px 0;animation:tape 18s linear infinite}
+@keyframes tape{to{transform:translateX(-50%)}}
 .hint{text-align:center;margin:18px 0 0;font:600 13px "DM Sans";color:var(--mute)}
 .hint span{display:inline-block;animation:nud 2.2s ease-in-out infinite}
 @keyframes nud{50%{transform:translateY(-3px)}}
@@ -88,14 +92,15 @@ h1{font:500 clamp(34px,5.2vw,60px)/1.04 Fraunces,Georgia,serif;margin:0 0 14px;l
     <div>
       <div class="cab" role="button" tabindex="0" aria-label="Schublade antippen" data-cab>
         <img src="/img/nf/schublade_1600.webp" srcset="/img/nf/schublade_900.webp 900w, /img/nf/schublade_1600.webp 1600w" sizes="(max-width:860px) 92vw, 640px" width="1600" height="900" alt="Eine geöffnete, leere Küchenschublade mit Licht unter der Arbeitsplatte">
+        <div class="tape" aria-hidden="true"><span>Baustelle · Hier wird montiert · Bitte nicht stören · Baustelle · Hier wird montiert · Bitte nicht stören · </span></div>
         <span class="n4" aria-hidden="true">404</span><i class="dust"></i><i class="dust"></i><i class="dust"></i>
       </div>
-      <p class="hint" data-hint><span>↑</span> Tippen Sie die Schublade an – vielleicht liegt doch noch etwas drin.</p>
+      <p class="hint" data-hint><span>↑</span> Tippen Sie die Schublade an – vielleicht liegt das Werkzeug noch drin.</p>
     </div>
     <div>
-      <p class="kick">Seite nicht gefunden</p>
-      <h1>Diese Schublade ist leer.</h1>
-      <p class="lead">Die Seite wurde leider verschoben oder gibt es nicht mehr. Vielleicht hat sich auch nur ein Buchstabe in die Adresse geschlichen. Was interessiert Sie?</p>
+      <p class="kick">Fehler 404 · Seite nicht gefunden</p>
+      <h1>Hier wird gerade noch montiert.</h1>
+      <p class="lead">Diese Seite gibt es nicht mehr – oder unsere Monteure bauen sie gerade auf, millimetergenau wie jede Küche. Vielleicht hat sich auch nur ein Buchstabe in die Adresse geschlichen. Schauen Sie sich solange in der Ausstellung um:</p>
       <div class="guess" data-guess aria-live="polite"><p>Meinten Sie <span data-gt></span>?</p><div class="row"><a class="btn" data-gl href="/">Ja, dorthin</a><button type="button" class="btn g" data-gx>Nein, danke</button><span class="cd" data-cd></span></div></div>
       <label class="q"><input type="search" placeholder="Wonach suchen Sie? z. B. Planer" aria-label="Wonach suchen Sie?" data-q></label>
       <nav class="cards" aria-label="Seiten von Küchenstudio Pellegrin" data-cards><a class="nf-c" href="/" data-k="index start home haupt startseite pellegrin ruppenthal kuechenhaus"><b>Startseite</b><small>Alles über das Studio in St. Wendel</small><i aria-hidden="true">→</i></a><a class="nf-c" href="/planer.html" data-k="planer kuechenplaner küchenplaner plan planen 3d konfigurator planung"><b>Küchenplaner</b><small>Ihre Küche in 3D selbst planen</small><i aria-hidden="true">→</i></a><a class="nf-c" href="/ausstellung.html" data-k="ausstellung musterkuechen muster rundgang showroom ausst"><b>Ausstellung</b><small>Rundgang durch die Musterküchen</small><i aria-hidden="true">→</i></a><a class="nf-c" href="/#termin" data-k="termin beratung aufmass aufmaß kontakt anfrage besuch"><b>Termin vereinbaren</b><small>Beratung im Studio oder Aufmaß</small><i aria-hidden="true">→</i></a><a class="nf-c" href="/nolte-kuechen.html" data-k="nolte"><b>Nolte Küchen</b><small>Fronten, Neuheiten 2027</small><i aria-hidden="true">→</i></a><a class="nf-c" href="/schueller-kuechen.html" data-k="schueller schüller schuller"><b>Schüller Küchen</b><small>Fronten, Neuheiten 2027</small><i aria-hidden="true">→</i></a><a class="nf-c" href="/technik.html" data-k="technik geraete geräte haube kochfeld abzug backofen"><b>Technik & Geräte</b><small>Kochfeldabzug, Haube, Backofen</small><i aria-hidden="true">→</i></a><a class="nf-c" href="/studio.html" data-k="studio ueber über team martin"><b>Über das Studio</b><small>Martin Pellegrin und sein Team</small><i aria-hidden="true">→</i></a></nav>
@@ -110,7 +115,7 @@ h1{font:500 clamp(34px,5.2vw,60px)/1.04 Fraunces,Georgia,serif;margin:0 0 14px;l
   if(matchMedia('(hover:hover)').matches)cab.addEventListener('pointermove',function(e){var r=cab.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;cab.style.setProperty('--ry',(x*7)+'deg');cab.style.setProperty('--rx',(-y*5)+'deg')});
   cab.addEventListener('pointerleave',function(){cab.style.setProperty('--ry','0deg');cab.style.setProperty('--rx','0deg')});
   function poke(){n++;cab.classList.remove('wig');void cab.offsetWidth;cab.classList.add('wig');var on=cab.classList.toggle('lit');cab.classList.toggle('dark',!on);
-    hint.textContent=n===1?'Licht aus – immer noch nichts. Aber im Küchenplaner ist für jede Schublade Platz.':n===2?'Licht an: wirklich leer. Ehrlich.':'Okay – hier geht es weiter.';
+    hint.textContent=n===1?'Licht aus – kein Werkzeug. Die Monteure haben alles mitgenommen.':n===2?'Licht an: wirklich leer. Die Seite ist noch auf der Baustelle.':'Okay – hier geht es weiter.';
     if(n===3){var b=document.querySelector('.nf-c.big')||document.querySelector('.nf-c');b&&b.focus()}}
   cab.addEventListener('click',poke);cab.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();poke()}});
   // Vermutung aus der vertippten Adresse
@@ -130,7 +135,7 @@ h1{font:500 clamp(34px,5.2vw,60px)/1.04 Fraunces,Georgia,serif;margin:0 0 14px;l
     ['pointerdown','keydown','scroll'].forEach(function(ev){addEventListener(ev,function h(e){if(e.target&&e.target.closest&&e.target.closest('[data-gl]'))return;stop();removeEventListener(ev,h)},{passive:true})});
   }
   // größte Karte: Vermutung, sonst Küchenplaner
-  (g||cards[1]).classList.add('big');var nav=document.querySelector('[data-cards]');nav.insertBefore(g||cards[1],nav.firstChild);
+  (g||cards[2]).classList.add('big');var nav=document.querySelector('[data-cards]');nav.insertBefore(g||cards[2],nav.firstChild);
   var q=document.querySelector('[data-q]');q.addEventListener('input',function(){var v=q.value.trim();cards.forEach(function(c){c.classList.remove('dim','hit')});if(!v)return;var w=norm(v);var hits=cards.filter(function(c){return score(w,c)<=.42||norm(c.textContent).indexOf(w)>=0});cards.forEach(function(c){c.classList.toggle('dim',hits.indexOf(c)<0);c.classList.toggle('hit',hits.indexOf(c)>=0)})});
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){var h=document.querySelector('.nf-c.hit');if(h)location.href=h.getAttribute('href')}});
 })();
