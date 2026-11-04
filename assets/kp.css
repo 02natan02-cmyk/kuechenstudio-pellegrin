@@ -769,3 +769,26 @@ html.kp-lv-on{overflow:hidden}
 .kp-plb button{display:grid;gap:2px;text-align:left;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font:inherit;transition:border-color .2s,transform .2s}
 .kp-plb button:hover{border-color:var(--acc,#7f7d4c);transform:translateY(-1px)}
 .kp-plb b{font:700 14px var(--sans);hyphens:manual}.kp-plb small{font-size:12px;color:var(--mute)}
+.kp-isl-side{display:grid;gap:6px}
+.kp-isl-side small,.kp-isl-l{font:600 11.5px var(--sans);color:var(--mute);margin-top:2px}
+.kp-isl-side .kp-seg button,.kp-isl .kp-seg button{padding:7px 10px;font-size:12px}
+/* Anschlüsse: prominente Karte direkt unter dem Grundriss (Natan 04.11. 19:30) */
+.kp-cxcard{position:relative;margin:16px 0 18px;padding:16px 16px 12px;border-radius:18px;background:linear-gradient(160deg,#f3f8fc,#fff 55%,#fbf4ee);box-shadow:inset 0 0 0 1.5px rgba(47,127,193,.22),0 18px 40px -30px rgba(30,60,90,.45);overflow:hidden}
+.kp-cxcard::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--kpcx-a,0deg),transparent 0 70%,#2f7fc1 80%,#d0582a 88%,transparent 96%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:kpCxRun 5.5s linear infinite;pointer-events:none}
+@property --kpcx-a{syntax:'<angle>';initial-value:0deg;inherits:false}
+@keyframes kpCxRun{to{--kpcx-a:360deg}}
+.kp-cxcard.has::before{animation:none;opacity:0}
+.kp-cxcard-h{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.kp-cxcard-ic{flex:none;width:46px;height:46px;border-radius:14px;background:#fff;box-shadow:0 6px 16px -8px rgba(30,60,90,.45);display:grid;place-items:center}
+.kp-cxcard-ic svg{width:34px;height:34px;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.kp-cxcard-ic .w{stroke:#2f7fc1;fill:rgba(47,127,193,.14);transform-origin:17px 30px;animation:kpDrop 2.6s ease-in-out infinite}
+.kp-cxcard-ic .e{stroke:#d0582a}
+@keyframes kpDrop{0%,100%{transform:translateY(0) scale(1)}40%{transform:translateY(2px) scale(1.06,.94)}60%{transform:translateY(-1px) scale(.97,1.04)}}
+.kp-cxcard-k{margin:0;font:700 10.5px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:#2f7fc1}
+.kp-cxcard-t{margin:2px 0 0;font:600 17px/1.25 var(--serif,Georgia,serif);color:var(--ink)}
+.kp-cxcard .kp-cxadd{margin:10px 0 6px}
+.kp-cxcard .kp-cxadd button{background:#fff;box-shadow:0 1px 0 var(--line),0 8px 18px -14px rgba(0,0,0,.4);transition:transform .2s,box-shadow .2s}
+.kp-cxcard .kp-cxadd button:hover{transform:translateY(-2px)}
+.kp-cxhelp{margin-top:4px}.kp-cxhelp>summary{cursor:pointer;font:600 12.5px var(--sans);color:var(--mute);list-style:none}.kp-cxhelp>summary::-webkit-details-marker{display:none}.kp-cxhelp>summary::after{content:" ▾"}.kp-cxhelp[open]>summary::after{content:" ▴"}
+@media (prefers-reduced-motion:reduce){.kp-cxcard::before,.kp-cxcard-ic .w{animation:none}}
+.kp-cxcard{padding:16px 12px 12px}.kp-cxcard .kp-cxadd button{min-width:0;padding:10px 4px;gap:4px;font-size:12.5px;white-space:nowrap}
