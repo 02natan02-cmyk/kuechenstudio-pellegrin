@@ -84,3 +84,57 @@
     if (wall) wall.addEventListener('click', function (e) { var i = tiles.indexOf(e.target); wall.classList.add('t'); if (!RM) wave(i < 0 ? Math.floor(tiles.length / 2) : i); });
   });
 })();
+
+/* Nolte & Schüller: Lichtleiste ziehen, Neuheiten antippen, Bilder wechseln, Messband */
+(() => {
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('[data-hs-q]').forEach(q => {
+    const mm = q.querySelector('[data-hs-mm]');
+    const go = () => { q.classList.add('in'); if (!mm) return; if (RM) { mm.textContent = '0,0'; return; }
+      const t0 = performance.now(); (function f(t) { const k = Math.min(1, (t - t0) / 2200), v = 3 * Math.pow(1 - k, 3); mm.textContent = v.toFixed(1).replace('.', ','); if (k < 1) requestAnimationFrame(f); })(t0); };
+    if (!('IntersectionObserver' in window)) return go();
+    new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); go(); } }, { threshold: .5 }).observe(q);
+  });
+  const sec = document.querySelector('[data-hs]'); if (!sec) return;
+  const st = sec.querySelector('[data-hs-stage]'), bar = sec.querySelector('[data-hs-bar]');
+  let x = 50, user = false;
+  const set = (v, from) => { x = Math.max(8, Math.min(92, v)); st.style.setProperty('--x', x + '%'); bar.setAttribute('aria-valuenow', Math.round(x));
+    const lean = x > 60 ? 'l' : x < 40 ? 'r' : ''; lean ? st.setAttribute('data-lean', lean) : st.removeAttribute('data-lean');
+    bar.setAttribute('aria-valuetext', lean === 'l' ? 'Mehr Nolte' : lean === 'r' ? 'Mehr Schüller' : 'Nolte und Schüller zu gleichen Teilen'); };
+  const fromEv = e => { const r = st.getBoundingClientRect(); return (e.clientX - r.left) / r.width * 100; };
+  let drag = false, sx = 0, sy = 0, decided = false;
+  st.addEventListener('pointerdown', e => { if (e.target.closest('a')) return; drag = true; decided = e.pointerType === 'mouse'; sx = e.clientX; sy = e.clientY; user = true; st.classList.remove('cue');
+    if (decided) { st.classList.add('drag'); st.setPointerCapture(e.pointerId); set(fromEv(e)); } });
+  st.addEventListener('pointermove', e => { if (!drag) return;
+    if (!decided) { const dx = Math.abs(e.clientX - sx), dy = Math.abs(e.clientY - sy); if (dx < 6 && dy < 6) return; if (dy > dx) { drag = false; return; } decided = true; st.classList.add('drag'); try { st.setPointerCapture(e.pointerId); } catch (_) {} }
+    set(fromEv(e)); });
+  const end = e => { if (!drag) return; drag = false; st.classList.remove('drag');
+    if (!decided && e && e.type === 'pointerup') set(fromEv(e)); };
+  st.addEventListener('pointerup', end); st.addEventListener('pointercancel', () => { drag = false; st.classList.remove('drag'); });
+  bar.addEventListener('keydown', e => { const k = { ArrowLeft: -6, ArrowRight: 6, Home: -100, End: 100 }[e.key]; if (k == null) return; e.preventDefault(); user = true; set(k === -100 ? 8 : k === 100 ? 92 : x + k); });
+  // Bilder je Seite langsam wechseln
+  const cycle = side => { const ps = [...side.querySelectorAll('.hs-p')]; if (ps.length < 2) return; let k = ps.findIndex(p => p.classList.contains('on')); ps[k].classList.remove('on'); ps[(k + 1) % ps.length].classList.add('on'); };
+  const sides = { nolte: sec.querySelector('[data-side="nolte"]'), schueller: sec.querySelector('[data-side="schueller"]') };
+  let pause = 0;
+  setInterval(() => { if (document.hidden || Date.now() < pause) return; cycle(sides.nolte); setTimeout(() => cycle(sides.schueller), 1800); }, 6400);
+  // Neuheit antippen: Seite öffnet sich, passendes Bild erscheint
+  const IMG = 'img/hs/';
+  sec.querySelectorAll('.hs-n').forEach(b => b.addEventListener('click', () => {
+    user = true; pause = Date.now() + 12000; st.classList.remove('cue');
+    sec.querySelectorAll('.hs-n').forEach(o => o.classList.toggle('on', o === b));
+    const side = sides[b.dataset.b], key = b.dataset.k;
+    let p = side.querySelector('.hs-p[data-k="' + key + '"]');
+    if (!p) { p = document.createElement('picture'); p.className = 'hs-p'; p.dataset.k = key; p.innerHTML = '<source media="(max-width: 760px)" srcset="' + IMG + key + '_m.webp"><img src="' + IMG + key + '.webp" alt="' + b.querySelector('b').textContent + '" decoding="async">'; side.insertBefore(p, side.querySelector('.hs-src')); }
+    const show = () => { side.querySelectorAll('.hs-p').forEach(o => o.classList.toggle('on', o === p)); };
+    const im = p.querySelector('img'); im.complete ? requestAnimationFrame(show) : im.addEventListener('load', show, { once: true });
+    set(b.dataset.b === 'nolte' ? 78 : 22);
+    if (innerWidth < 760) st.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'center' });
+  }));
+  // Selbst-Impuls: Leiste einmal hin und her, dann Hinweis
+  if (!RM && 'IntersectionObserver' in window) {
+    new IntersectionObserver((es, o) => { if (!es[0].isIntersecting) return; o.disconnect();
+      [[30, 400], [70, 1500], [50, 2600]].forEach(([v, t]) => setTimeout(() => { if (!user) set(v); }, t));
+      setTimeout(() => { if (!user) st.classList.add('cue'); }, 3500); setTimeout(() => st.classList.remove('cue'), 9000);
+    }, { threshold: .45 }).observe(st);
+  }
+})();

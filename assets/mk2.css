@@ -4,7 +4,7 @@
 .mk2-head{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,60px);align-items:end;margin-bottom:28px}
 .mk2-head .lead{margin:0 0 18px}
 .mk2-ctrl{max-width:420px;padding-top:40px}
-.mk2-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.mk2-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 18px}
 .mk2-tabs .mk-c{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:16px 18px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.6);cursor:pointer;text-align:left;transition:background .35s,border-color .35s,transform .35s var(--ease),box-shadow .35s}
 .mk2-tabs .mk-c b{font:500 clamp(20px,2.2vw,28px) var(--serif);color:var(--ink)}
 .mk2-tabs .mk-c span{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
