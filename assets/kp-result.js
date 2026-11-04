@@ -247,16 +247,17 @@
     let s = '', y = yTop; const sw = .42 * u / 10;
     list.forEach(f => {
       const hh = f.cm != null ? f.cm : rest * (f.p || 1) / pSum; if (hh < .3) { y += hh; return; }
-      const R = (xx, ww) => `<rect x="${f1(xx + .5)}" y="${f1(y + .5)}" width="${f1(Math.max(.2, ww - 1))}" height="${f1(Math.max(.2, hh - 1))}" fill="${f.k === 'oven' || f.k === 'micro' ? '#3a3734' : PAPER}" stroke="${INK}" stroke-width="${sw}"/>`;
+      const R = (xx, ww) => `<rect x="${f1(xx + .5)}" y="${f1(y + .5)}" width="${f1(Math.max(.2, ww - 1))}" height="${f1(Math.max(.2, hh - 1))}" fill="${f.k === 'oven' || f.k === 'micro' || f.k === 'steam' ? '#3a3734' : PAPER}" stroke="${INK}" stroke-width="${sw}"/>`;
       const tri = (xx, ww, a) => { const d = `fill="none" stroke="${MUTE}" stroke-width="${sw * .8}" stroke-dasharray="${.35 * u} ${.25 * u}"`; if (a === 'up') return `<path d="M${f1(xx + 2.5)} ${f1(y + hh - 2.5)}L${f1(xx + ww / 2)} ${f1(y + 2.5)}L${f1(xx + ww - 2.5)} ${f1(y + hh - 2.5)}" ${d}/>`; const hx = a === 'r' ? xx + ww - 2.5 : xx + 2.5, fx = a === 'r' ? xx + 2.5 : xx + ww - 2.5; return `<path d="M${f1(fx)} ${f1(y + 2.5)}L${f1(hx)} ${f1(y + hh / 2)}L${f1(fx)} ${f1(y + hh - 2.5)}" ${d}/>`; };
       switch (f.k) {
         case 'door': case 'glass': s += R(x, w) + tri(x, w, f.a || 'l'); if (f.k === 'glass') s += `<rect x="${f1(x + 4)}" y="${f1(y + 4)}" width="${f1(w - 8)}" height="${f1(hh - 8)}" fill="#dbe7ea" stroke="${MUTE}" stroke-width="${sw * .7}"/>`; break;
         case 'door2': case 'glass2': s += R(x, w / 2) + R(x + w / 2, w / 2) + tri(x, w / 2, 'l') + tri(x + w / 2, w / 2, 'r'); break;
         case 'flap': case 'lift': case 'fold': s += R(x, w) + tri(x, w, 'up'); if (f.k === 'fold') s += pline(x + 1, y + hh / 2, x + w - 1, y + hh / 2, { w: sw, c: INK }); break;
+        case 'boards': { const n = Math.max(1, Math.round(hh / 30)); for (let i = 0; i < n; i++) s += `<rect x="${f1(x + .5)}" y="${f1(y + hh - (i + 1) * hh / n + hh / n - 4)}" width="${f1(w - 1)}" height="4" fill="#d8c3a5" stroke="${INK}" stroke-width="${sw}"/>`; break; }
         case 'open': s += `<rect x="${f1(x + .5)}" y="${f1(y + .5)}" width="${f1(w - 1)}" height="${f1(hh - 1)}" fill="#eee7dc" stroke="${INK}" stroke-width="${sw}"/>` + pline(x + 1, y + hh / 2, x + w - 1, y + hh / 2, { w: sw, c: MUTE }); break;
         case 'dw': s += R(x, w) + ptxt(x + w / 2, y + hh / 2 + .3 * u, 'GS', .75 * u, { fill: MUTE, w: 700 }); break;
         case 'blind': s += `<rect x="${f1(x + .5)}" y="${f1(y + .5)}" width="${f1(w - 1)}" height="${f1(hh - 1)}" fill="#efe9df" stroke="${INK}" stroke-width="${sw}"/>`; break;
-        case 'oven': case 'micro': s += R(x, w) + `<rect x="${f1(x + 5)}" y="${f1(y + 6)}" width="${f1(w - 10)}" height="${f1(Math.max(2, hh - 12))}" rx="1.5" fill="#55504a"/>`; break;
+        case 'oven': case 'micro': case 'steam': s += R(x, w) + `<rect x="${f1(x + 5)}" y="${f1(y + 6)}" width="${f1(w - 10)}" height="${f1(Math.max(2, hh - 12))}" rx="1.5" fill="#55504a"/>`; break;
         default: s += R(x, w) + pline(x + w / 2 - Math.min(9, w * .25), y + 3.2, x + w / 2 + Math.min(9, w * .25), y + 3.2, { w: sw * 2.2, c: INK, cap: 'round' });
       }
       y += hh;
