@@ -112,7 +112,7 @@
     var V = { x: 430, y: 352 }, POT = { x: 340, y: 296 };
     var PATH_U = [[430, 362], [430, 430], [430, 470], [540, 470], [540, 560], [540, 588], [620, 588], [700, 588], [790, 588]];
     var PATH_A = [[430, 362], [430, 430], [430, 470], [600, 470], [700, 470], [800, 470]];
-    var HOOD = [[430, 120], [430, 40], [430, -20]];
+    var HOOD = [[430, 120], [430, 40], [430, -20]], HOOD_U = [[430, 120], [430, 52], [430, 30], [470, 30], [560, 30], [640, 30]];
     function pathPt(P, t) { var L = [], tot = 0, i; for (i = 1; i < P.length; i++) { var d = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); L.push(d); tot += d; } var s = t * tot; for (i = 0; i < L.length; i++) { if (s <= L[i]) { var k = s / L[i]; return [P[i][0] + (P[i + 1][0] - P[i][0]) * k, P[i][1] + (P[i + 1][1] - P[i][1]) * k]; } s -= L[i]; } return P[P.length - 1]; }
     function spawn(n) { for (var i = 0; i < n; i++) parts.push({ x: POT.x + (Math.random() - .5) * 90, y: POT.y - 2, vx: (Math.random() - .5) * .3, vy: -.6 - Math.random() * .6, a: .9, r: 10 + Math.random() * 12, life: 0 }); }
     function step(dt) {
@@ -126,7 +126,7 @@
           if (d < 16) { flow.push({ t: 0, sp: .0055 + Math.random() * .002, P: luft === 'umluft' ? PATH_U : PATH_A }); parts.splice(i, 1); continue; }
         } else {
           p.vx *= .985; p.vy *= .985;
-          if (p.y < 150 && p.x > 330 && p.x < 530) { var hx = 430 - p.x, hy = 100 - p.y, hd = Math.hypot(hx, hy) + 1; p.vx += hx / hd * .12; p.vy += hy / hd * .12; if (hd < 24) { flow.push({ t: 0, sp: .012, P: HOOD }); parts.splice(i, 1); continue; } }
+          if (p.y < 150 && p.x > 330 && p.x < 530) { var hx = 430 - p.x, hy = 100 - p.y, hd = Math.hypot(hx, hy) + 1; p.vx += hx / hd * .12; p.vy += hy / hd * .12; if (hd < 24) { flow.push({ t: 0, sp: luft === 'umluft' ? .008 : .012, P: luft === 'umluft' ? HOOD_U : HOOD }); parts.splice(i, 1); continue; } }
           if (p.y < 60) { p.vy = Math.abs(p.vy) * .2; p.vx += (p.x < 430 ? -.06 : .06); }
           p.r += .05; p.a -= .0016; if (p.a <= .05 || p.x < -40 || p.x > 840) { parts.splice(i, 1); haze = Math.min(1, haze + .004); continue; }
         }
@@ -156,7 +156,7 @@
       rr(W - 240, 34, 240, 150, 4, '#3a3633'); cx.fillStyle = '#b5835a'; cx.fillRect(W - 240, 178, 240, 6);
       cx.fillStyle = 'rgba(255,214,170,.55)'; cx.fillRect(W - 232, 186, 224, 3);
       // Haube
-      if (mode === 'haube') { cx.fillStyle = '#3d3936'; cx.fillRect(404, 0, 52, 84); cx.beginPath(); cx.moveTo(318, 142); cx.lineTo(542, 142); cx.lineTo(474, 82); cx.lineTo(386, 82); cx.closePath(); cx.fillStyle = '#4a4542'; cx.fill(); cx.fillStyle = '#7f7d4c'; cx.fillRect(326, 138, 208, 4); }
+      if (mode === 'haube') { cx.fillStyle = '#3d3936'; cx.fillRect(404, 0, 52, 84); cx.beginPath(); cx.moveTo(318, 142); cx.lineTo(542, 142); cx.lineTo(474, 82); cx.lineTo(386, 82); cx.closePath(); cx.fillStyle = '#4a4542'; cx.fill(); cx.fillStyle = '#7f7d4c'; cx.fillRect(326, 138, 208, 4); if (luft === 'umluft') { for (var gq = 0; gq < 5; gq++) { cx.fillStyle = '#25221f'; cx.fillRect(458, 20 + gq * 5, 10, 2.5); } pill('Umluft: Aktivkohle, Luft zurück in den Raum', 480, 58, 'rgba(246,241,233,.92)', '#1c1a17'); } else pill('Abluft: durch den Kamin nach draußen', 396, 22, 'rgba(246,241,233,.92)', '#1c1a17', 'right'); }
       // Arbeitsplatte Keramik hell + Unterschrank (aufgeschnitten)
       cx.fillStyle = '#ece6dc'; cx.fillRect(0, 360, W, 18); cx.fillStyle = '#cfc6b8'; cx.fillRect(0, 374, W, 4);
       rr(0, 378, W, 202, 0, '#2c2927');
@@ -186,20 +186,20 @@
       cx.fillStyle = '#d5d8bf'; cx.fillRect(282, 298, 116, 6); cx.fillStyle = '#7a5a46'; cx.fillRect(266, 310, 18, 5); cx.fillRect(396, 310, 18, 5);
       // Dampf
       for (var j = 0; j < parts.length; j++) { var p = parts[j], gg = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r); var al = p.a * (mode === 'abzug' ? .62 : .78); gg.addColorStop(0, 'rgba(255,248,240,' + al + ')'); gg.addColorStop(1, 'rgba(255,248,240,0)'); cx.fillStyle = gg; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 6.3); cx.fill(); }
-      cx.lineCap = 'round'; for (j = 0; j < flow.length; j++) { var f = flow[j], q = pathPt(f.P, f.t); if (f.P !== HOOD && f.t > .03) { var q0 = pathPt(f.P, f.t - .03); cx.strokeStyle = f.P === PATH_U && f.t > .78 ? 'rgba(190,220,180,.35)' : 'rgba(240,184,150,.35)'; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(q0[0], q0[1]); cx.lineTo(q[0], q[1]); cx.stroke(); } var clean = f.P === PATH_U && f.t > .78; cx.fillStyle = f.P === HOOD ? 'rgba(255,248,240,.7)' : (f.t < .2 ? 'rgba(255,248,240,.85)' : clean ? 'rgba(190,220,180,.95)' : 'rgba(240,184,150,.9)'); cx.beginPath(); cx.arc(q[0] + (Math.random() - .5) * 4, q[1] + (Math.random() - .5) * 4, 3.2, 0, 6.3); cx.fill(); }
+      cx.lineCap = 'round'; for (j = 0; j < flow.length; j++) { var f = flow[j], q = pathPt(f.P, f.t); if (f.P !== HOOD && f.P !== HOOD_U && f.t > .03) { var q0 = pathPt(f.P, f.t - .03); cx.strokeStyle = f.P === PATH_U && f.t > .78 ? 'rgba(190,220,180,.35)' : 'rgba(240,184,150,.35)'; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(q0[0], q0[1]); cx.lineTo(q[0], q[1]); cx.stroke(); } var clean = (f.P === PATH_U && f.t > .78) || (f.P === HOOD_U && f.t > .45); cx.fillStyle = f.P === HOOD || (f.P === HOOD_U && !clean) ? 'rgba(255,248,240,.7)' : (f.t < .2 ? 'rgba(255,248,240,.85)' : clean ? 'rgba(190,220,180,.95)' : 'rgba(240,184,150,.9)'); cx.beginPath(); cx.arc(q[0] + (Math.random() - .5) * 4, q[1] + (Math.random() - .5) * 4, 3.2, 0, 6.3); cx.fill(); }
       if (haze > .01) { cx.fillStyle = 'rgba(214,204,192,' + (haze * .42) + ')'; cx.fillRect(0, 0, W, 360); }
       // Geschwindigkeit
       arrow(252, 282, 252, 232, '#f6efe6'); pill('Dunst steigt: ≤ 1 m/s', 252, 214, 'rgba(28,26,23,.75)', '#f6efe6', 'right');
       if (mode === 'abzug') { arrow(476, 296, 448, 340, '#d5d8bf'); pill('ca. 4 m/s nach unten', 486, 290, '#7f7d4c', '#fff'); }
       else { var ht = FS > 1.3 ? 'Der Rest bleibt im Raum.' : 'Was die Haube nicht erwischt, bleibt im Raum.'; pill(ht, 790, 300, 'rgba(28,26,23,.86)', '#f6efe6', 'right'); }
-      var bt = mode === 'abzug' ? 'Kochfeldabzug · ' + (luft === 'umluft' ? 'Umluft' : 'Abluft') : 'Dunsthaube'; cx.font = 'italic 400 ' + (17 * FS) + 'px Fraunces, Georgia, serif'; var bw = cx.measureText(bt).width + 30;
+      var bt = (mode === 'abzug' ? 'Kochfeldabzug · ' : 'Dunsthaube · ') + (luft === 'umluft' ? 'Umluft' : 'Abluft'); cx.font = 'italic 400 ' + (17 * FS) + 'px Fraunces, Georgia, serif'; var bw = cx.measureText(bt).width + 30;
       var bh = 18 + 16 * FS; rr(W - bw - 16, 14, bw, bh, 8, mode === 'abzug' ? 'rgba(127,125,76,.95)' : 'rgba(246,241,233,.95)'); cx.fillStyle = mode === 'abzug' ? '#fff' : '#1c1a17'; cx.textAlign = 'left'; cx.fillText(bt, W - bw - 1, 14 + bh / 2 + 6 * FS);
     }
     function loop(t) { var dt = Math.min(3, (t - (last || t)) / 16.7); last = t; step(dt); draw(); if (run) raf = requestAnimationFrame(loop); }
-    function setCap() { cap.textContent = mode === 'haube' ? 'Mit Haube zieht der Dunst erst an Gesicht und Oberschrank vorbei nach oben – was am Rand vorbeigeht, verteilt sich in der Küche.' : luft === 'umluft' ? 'Umluft: erst Fettfilter, dann Aktivkohle – die gereinigte Luft kommt unten am Sockel zurück in die Küche.' : 'Abluft: Der Dunst läuft durch einen Kanal im Unterschrank nach draußen.'; }
+    function setCap() { cap.textContent = mode === 'haube' ? 'Mit Haube zieht der Dunst erst an Gesicht und Oberschrank vorbei nach oben – was am Rand vorbeigeht, verteilt sich in der Küche.' + (luft === 'umluft' ? ' Bei Umluft reinigt Aktivkohle die Luft, sie kommt oben aus der Haube zurück in den Raum.' : ' Bei Abluft geht sie durch den Kamin nach draußen.') : luft === 'umluft' ? 'Umluft: erst Fettfilter, dann Aktivkohle – die gereinigte Luft kommt unten am Sockel zurück in die Küche.' : 'Abluft: Der Dunst läuft durch einen Kanal im Unterschrank nach draußen.'; }
     function setMode(m) { mode = m; $$('[data-kfam]', sec).forEach(function (x) { var o = x.dataset.kfam === m; x.classList.toggle('on', o); x.setAttribute('aria-pressed', o ? 'true' : 'false'); }); }
     $$('[data-kfam]', sec).forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.kfam); flow = []; setCap(); if (!run) { warm(); draw(); } }); });
-    $$('[data-kfal]', sec).forEach(function (b) { b.addEventListener('click', function () { luft = b.dataset.kfal; $$('[data-kfal]', sec).forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); if (mode !== 'abzug') setMode('abzug'); flow = []; setCap(); if (!run) { warm(); draw(); } }); });
+    $$('[data-kfal]', sec).forEach(function (b) { b.addEventListener('click', function () { luft = b.dataset.kfal; $$('[data-kfal]', sec).forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); flow = []; setCap(); if (!run) { warm(); draw(); } }); });
     lvl.addEventListener('input', function () { level = +lvl.value; out.textContent = level; if (!run) { warm(); draw(); } });
     $$('[data-kfashow]', sec).forEach(function (b) { b.addEventListener('click', function () { var t = $('[data-kfal="abluft"]', sec); if (t) t.click(); var r = cv.getBoundingClientRect(); scrollToY(r.top + scrollY - 110); }); });
     function warm() { parts = []; flow = []; haze = 0; for (var i = 0; i < 260; i++) step(1); }

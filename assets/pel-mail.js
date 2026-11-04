@@ -1,7 +1,7 @@
 /* Küchenstudio Pellegrin – Formular-Versand (Make, gestaltete Mails, Rückfall Formular-Dienst) */
 (function () {
   var HOOK = document.documentElement.getAttribute('data-hook'); if (!HOOK) return;
-  var QSEL = '<label class="tm-l">Wie sind Sie auf uns aufmerksam geworden?<select name="Quelle" data-quelle><option value="">Bitte wählen (freiwillig)</option><option>Google-Suche</option><option>Google Maps</option><option>ChatGPT oder andere KI</option><option>Empfehlung von Freunden oder Bekannten</option><option>Instagram oder Facebook</option><option>Ich war schon Kunde</option><option>Vorbeigefahren</option><option>Sonstiges</option></select></label>';
+  var QSEL = '<label class="tm-l">Wie sind Sie auf uns aufmerksam geworden?<select name="Quelle" data-quelle><option value="">Bitte wählen (freiwillig)</option><option value="Empfehlung von Freunden oder Bekannten">★ Empfehlung von Freunden oder Bekannten · am häufigsten</option><option>Google-Suche</option><option>Google Maps</option><option>ChatGPT oder andere KI</option><option>Instagram oder Facebook</option><option>Ich war schon Kunde</option><option>Vorbeigefahren</option><option>Sonstiges</option></select></label>';
   var MAXJSON = 4.6e6, MAXFILE = 2.9e6, PX = 1800;
   var NAMES = { 'Entwurf-Bild': 'Kuechenentwurf.jpg', 'Raumfoto': 'Raumfoto.jpg', 'Raumfoto-mit-Kueche': 'Raumfoto-mit-Kueche.jpg', 'Rueckwand-Motiv': 'Rueckwand-Motiv.jpg' };
   function shrink(f) {
@@ -32,6 +32,8 @@
       if (map[k]) o[map[k]] = String(v).trim();
     });
     var m = /Link:\s*(\S+)/.exec(o.entwurf || ''); if (m) o.link = m[1];
+    /* Für die Mail ans Studio: Link raus (steht als Knopf darunter), jede Position auf eine eigene Zeile */
+    if (o.entwurf) o.entwurf = o.entwurf.replace(/\n?\s*Link:\s*\S+/g, '').replace(/ · /g, '\n– ').replace(/\n{3,}/g, '\n\n').trim();
     return { o: base(o), files: files };
   }
   function handle(form, art, nat) {
