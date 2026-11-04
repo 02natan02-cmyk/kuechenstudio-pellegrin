@@ -72,7 +72,9 @@
     zwei: { n: 'Zweizeilig', walls: ['N', 'S'], d: 'Zwei gegenüber', p: 'M6 6h52v10H6zM6 30h52v10H6z' },
     insel: { n: 'Mit Insel', walls: ['N'], island: 1, d: 'Zeile + Kochinsel', p: 'M6 6h52v10H6zM18 26h28v10H18z' },
   };
-  const WN = { N: 'Rückwand', W: 'Linke Wand', E: 'Rechte Wand', S: 'Gegenüber' };
+  const WN = { N: 'Hintere Wand', W: 'Linke Wand', E: 'Rechte Wand', S: 'Wand gegenüber' };
+  // „an der …“ für Meldungen – „Rückwand“ meint im Planer nur die Küchenrückwand über der Arbeitsplatte
+  const WAN = { N: 'an der hinteren Wand', W: 'an der linken Wand', E: 'an der rechten Wand', S: 'an der Wand gegenüber' };
   // Farbwelten (17.10.): Kunden wählen nach Gefühl, nicht nach Hersteller. Jede Welt hat ihre Töne und eine
   // stimmige Kombination (Arbeitsplatte, Griffe, Wand, Boden). Die Herstellerzuordnung geht nur verdeckt als Hinweis mit der Anfrage ans Studio.
   const WORLDS = [
@@ -205,6 +207,7 @@
   const sinkCol = () => (SINKS.find(x => x[0] === eqv('sink', 'edel')) || SINKS[0])[2];
   const tapCol = () => (TAPS.find(x => x[0] === eqv('tap', 'chrom')) || TAPS[0])[2];
   const isDD = () => eqv('hobV', 'normal') === 'dd';
+  let koWhy = 0;
   // Eine Wandhaube (Schräghaube, Esse, Flachschirm) hängt nie vor einem Fenster oder einer Tür – genau wie die Hängeschränke.
   // Frei davon sind nur der Deckenlüfter (in der Decke) und der Muldenlüfter (im Kochfeld).
   const wallHood = () => !isDD() && eqv('hood', 'schraeg') !== 'decke';
@@ -707,7 +710,8 @@
     nsSegs(w).forEach(([x, sw, h]) => { rects += `<rect x="${x}" y="${y1 - h}" width="${sw}" height="${h}"/>`; if (h >= 40) tops += `<rect x="${x}" y="${y1 - h}" width="${sw}" height="1.2"/>`; if (x0 == null || x < x0) x0 = x; x1 = Math.max(x1, x + sw); });
     if (x0 == null) return '';
     if (b !== 'wand') {
-      if (b === 'motiv' && motif) s += `<clipPath id="kpbs${w}">${rects}</clipPath><image href="${motif._url}" x="${x0}" y="${y1 - 55}" width="${x1 - x0}" height="55" preserveAspectRatio="xMidYMid slice" clip-path="url(#kpbs${w})"/>`;
+      if (b === 'motiv' && motif) { const Wn = x1 - x0, z = +P.style.motZ || 1, sc = Math.max(Wn / motif.width, 55 / motif.height) * z, iw = motif.width * sc, ih = motif.height * sc, px = +P.style.motX || 0, py = +P.style.motY || 0;
+        s += `<clipPath id="kpbs${w}">${rects}</clipPath><image href="${motif._url}" x="${(x0 + (Wn - iw) * (.5 - px / 2)).toFixed(1)}" y="${(y1 - 55 + (55 - ih) * (.5 + py / 2)).toFixed(1)}" width="${iw.toFixed(1)}" height="${ih.toFixed(1)}" preserveAspectRatio="none" clip-path="url(#kpbs${w})"/>`; }
       else s += `<g fill="${fill}"${b === 'holz' ? ' filter="url(#kpgrain)"' : ''}>${rects}</g>`;
       if (b === 'motiv' && !motif) s += `<text x="${(x0 + x1) / 2}" y="${y1 - 24}" font-size="7" text-anchor="middle" fill="#8a7f72" font-family="system-ui">Ihr Motiv – Foto in Schritt 3 hochladen</text>`;
       if (b === 'glas' || b === 'motiv') s += `<g fill="#fff" opacity=".1" clip-path="url(#kpbsg${w})"><clipPath id="kpbsg${w}">${rects}</clipPath><path d="M${x0} ${y1 - 55}h${(x1 - x0) * .35}l-30 55h${-(x1 - x0) * .35 + 30}z"/></g>`;
@@ -965,12 +969,14 @@
     P.rows[w].splice(idx, 0, m); curWall = w;
     makeRoom(w, m);
     sel = m.id; change(); pulse(m.id);
+    // Herd mit Backofen darunter und Muldenlüfter passen nicht in einen Schrank – das Neue gewinnt
+    if (m.t === 'ko' && isDD()) { koWhy = 1; setEq('hobV', 'normal'); koWhy = 0; }
   }
   function makeRoom(w, keep) {
     let over = -free(w); if (over <= 0.5) return;
     const R = [...P.rows[w]].reverse().filter(x => x.t === 'us' && x !== keep);
     for (const x of R) { if (over <= 0.5) break; const nw = Math.max(0, x.w - over); const fit = M.us.ws.filter(v => v <= nw).pop(); if (fit) { over -= x.w - fit; x.w = fit; } else { over -= x.w; P.rows[w] = P.rows[w].filter(y => y !== x); } }
-    if (over > 0.5) toast(`${WN[w]}: ${Math.round(over)} cm zu lang – nehmen Sie etwas heraus oder machen Sie es schmaler.`);
+    if (over > 0.5) toast(`Die Küche ${WAN[w]} ist ${Math.round(over)} cm zu lang für die Wand – einen Schrank herausnehmen oder schmaler machen.`);
   }
   function addTo(w, t, o) {
     const m = mk(t, 0, o); const rowsW = P.rows[w];
@@ -1036,6 +1042,8 @@
   // dazu „← wischen · antippen zum Einsetzen →“, bis die Leiste zum ersten Mal berührt oder gescrollt wird.
   // Gruppen-Reiter darüber: gleicher Rand + ein Anstupser – nur, wenn sie wirklich überlaufen. Reduzierte Bewegung: nur Hinweis.
   const MOBQ = typeof matchMedia === 'function' ? matchMedia('(max-width: 999px)') : { matches: false };
+  // Handy quer: 3D links fest, Bedienung rechts (siehe kp.css „Handy quer“)
+  const LANDQ = typeof matchMedia === 'function' ? matchMedia('(max-width: 999px) and (orientation: landscape) and (max-height: 560px)') : { matches: false };
   const palFx = { seen: false, done: false, chip: null, run: null, catsDone: false };
   const ovX = el => !!el && el.clientWidth > 0 && el.scrollWidth - el.clientWidth > 4;
   function edgeFx(el) {
@@ -1137,7 +1145,11 @@
     // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
     const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
     pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
-    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
+    // Handy quer: Karte bleibt in der rechten Spalte, das 3D links bleibt frei
+    const stg = LANDQ.matches && $('.kp-stage'), minL = stg ? Math.round(stg.getBoundingClientRect().right + 8) : 8;
+    pop.style.maxWidth = stg ? (innerWidth - minL - 8) + 'px' : '';
+    if (stg) { const hb = Math.round($('.kp-head').getBoundingClientRect().bottom) + 6; pop.style.maxHeight = (innerHeight - hb - 8) + 'px'; }
+    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(minL, Math.min(innerWidth - pw - 8, left));
     let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
     if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
     pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
@@ -1175,7 +1187,11 @@
     // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
     const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
     pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
-    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
+    // Handy quer: Karte bleibt in der rechten Spalte, das 3D links bleibt frei
+    const stg = LANDQ.matches && $('.kp-stage'), minL = stg ? Math.round(stg.getBoundingClientRect().right + 8) : 8;
+    pop.style.maxWidth = stg ? (innerWidth - minL - 8) + 'px' : '';
+    if (stg) { const hb = Math.round($('.kp-head').getBoundingClientRect().bottom) + 6; pop.style.maxHeight = (innerHeight - hb - 8) + 'px'; }
+    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(minL, Math.min(innerWidth - pw - 8, left));
     let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
     if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
     pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
@@ -1259,7 +1275,11 @@
     // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
     const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
     pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
-    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
+    // Handy quer: Karte bleibt in der rechten Spalte, das 3D links bleibt frei
+    const stg = LANDQ.matches && $('.kp-stage'), minL = stg ? Math.round(stg.getBoundingClientRect().right + 8) : 8;
+    pop.style.maxWidth = stg ? (innerWidth - minL - 8) + 'px' : '';
+    if (stg) { const hb = Math.round($('.kp-head').getBoundingClientRect().bottom) + 6; pop.style.maxHeight = (innerHeight - hb - 8) + 'px'; }
+    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(minL, Math.min(innerWidth - pw - 8, left));
     let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
     if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
     pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
@@ -1304,6 +1324,8 @@
       if (b === 'glas' || b === 'dibond') h += eqRow('Farbe', BACKC.map(([n, c]) => chip('backC', c, (P.style.backC || '') === c, IC.dot(c || (P.style.wood ? WOOD[P.style.wood] : P.style.front)), n)).join(''), blk);
       if (b === 'holz') h += eqRow('Holz', BACKW.map(([v, n, c]) => chip('backWood', v, (P.style.backWood || 'eiche') === v, IC.back('holz').replace(/fill="#[0-9a-f]{6}"/, `fill="${c}"`), n)).join(''), blk);
       if (b === 'motiv') h += eqRow('Motiv', `<button type="button" class="kp-eq kp-equp" data-e="motif" data-v="1">${IC.back('motiv')}<span>${motif ? 'Anderes Foto wählen' : 'Foto hochladen'}<small>bleibt auf Ihrem Gerät, bis Sie anfragen</small></span></button>`, blk);
+      if (b === 'motiv' && motif) { const z = +P.style.motZ || 1, mb = (v, l, t, dis) => `<button type="button" class="kp-mv" data-e="motMv" data-v="${v}" aria-label="${l}"${dis ? ' disabled' : ''}>${t}</button>`;
+        h += eqRow('Bild verschieben', `<div class="kp-mvpad">${mb('u', 'Bild nach oben', '↑')}${mb('l', 'Bild nach links', '←')}${mb('c', 'Bild mittig und ganz', '•')}${mb('r', 'Bild nach rechts', '→')}${mb('d', 'Bild nach unten', '↓')}</div><div class="kp-mvz">${mb('zo', 'Bild kleiner', '−', z <= 1)}<span>${Math.round(z * 100)} %</span>${mb('zi', 'Bild größer', '+', z >= 3)}</div>`, blk); }
       if (b === 'motiv') h += eqRow('Druck auf', [['glas', 'Glas', 'glänzend, kann leuchten'], ['dibond', 'Dibond', 'matt']].map(([v, n, d]) => chip('motivMat', v, (P.style.motivMat || 'glas') === v, IC.back(v), n, blk ? d : '')).join(''), blk);
       if (backLit()) h += eqRow('Licht', chip('backLed', P.style.backLed ? 0 : 1, !!P.style.backLed, IC.led(!!P.style.backLed), 'Glas beleuchtet', 'leuchtet von innen – im Abendmodus sichtbar'), blk);
       else if (b !== 'wand') h += `<p class="kp-eqhint">Beleuchten lässt sich nur eine Glas-Rückwand – von innen. Bei ${b === 'motiv' ? 'Dibond' : 'diesem Material'} gibt es dafür Licht unter den Hängeschränken.</p>`;
@@ -1320,7 +1342,11 @@
     // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
     const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
     pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
-    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
+    // Handy quer: Karte bleibt in der rechten Spalte, das 3D links bleibt frei
+    const stg = LANDQ.matches && $('.kp-stage'), minL = stg ? Math.round(stg.getBoundingClientRect().right + 8) : 8;
+    pop.style.maxWidth = stg ? (innerWidth - minL - 8) + 'px' : '';
+    if (stg) { const hb = Math.round($('.kp-head').getBoundingClientRect().bottom) + 6; pop.style.maxHeight = (innerHeight - hb - 8) + 'px'; }
+    const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(minL, Math.min(innerWidth - pw - 8, left));
     let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
     if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
     pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
@@ -1337,6 +1363,16 @@
   function setEq(k, v) {
     if (k === 'close') { eqSel = null; pop.hidden = true; renderWalls(); return; }
     if (k === 'motif') { motifIn.click(); return; }
+    if (k === 'motMv') { // eigenes Motiv auf der Rückwand verschieben und vergrößern
+      let x = +P.style.motX || 0, y = +P.style.motY || 0, z = +P.style.motZ || 1; const ZS = [1, 1.25, 1.5, 2, 2.5, 3];
+      if (v === 'c') { x = 0; y = 0; z = 1; }
+      else if (v === 'zi') z = ZS.find(q => q > z + .01) || 3;
+      else if (v === 'zo') { z = [...ZS].reverse().find(q => q < z - .01) || 1; }
+      else { const A = motif ? motif.width / motif.height : 1.5;
+        if (z < 1.01 && ((v === 'l' || v === 'r') || A > 4)) { z = 1.5; toast('Das Bild ist jetzt etwas größer, damit es sich in alle Richtungen schieben lässt.'); }
+        if (v === 'l') x = Math.max(-1, x - .25); if (v === 'r') x = Math.min(1, x + .25); if (v === 'u') y = Math.min(1, y + .25); if (v === 'd') y = Math.max(-1, y - .25); }
+      P.style.motX = x; P.style.motY = y; P.style.motZ = z; change(); return;
+    }
     if (k === 'sink' || k === 'tap' || k === 'hood' || k === 'ihood' || k === 'backWood' || k === 'pfDek' || k === 'wgDek' || k === 'gripEnd') P.style[k] = v;
     if (k === 'backC') { if (v) P.style.backC = v; else delete P.style.backC; }
     if (k === 'backLed') P.style.backLed = +v && backLit() ? 1 : 0;
@@ -1345,11 +1381,13 @@
     if (k === 'back') { P.style.back = v; if (v === 'motiv' && !motif) { motifIn.click(); } }
     if (k === 'hobW') { P.style.hobW = +v; let grown = 0; for (const w in P.rows) P.rows[w].forEach(m => { if (m.t === 'kf' && m.w < +v) { m.w = M.kf.ws.find(x => x >= +v) || m.w; makeRoom(w, m); grown = m.w; } }); if (grown) toast(`Der Kochfeldschrank ist jetzt ${grown} cm breit, damit das ${v}er Kochfeld hineinpasst.`); }
     if (k === 'hobV') {
-      P.style.hobV = v;
+      P.style.hobV = v; let koN = 0;
+      if (v === 'dd') for (const w in P.rows) P.rows[w].forEach(m => { if (m.t === 'ko') { m.t = 'kf'; koN++; } });
       for (const w in P.up) { const hobs = [], X = xs(w); (P.rows[w] || []).forEach((m, i) => { if (m.t === 'kf' || m.t === 'ko') hobs.push([X[i], m.w]); });
         if (v === 'dd') P.up[w] = P.up[w].filter(u => !(u.t === 'dh' && hobs.some(([a, b]) => ov(a, b, u.s, u.w))));
         else hobs.forEach(([a, b]) => { if (!P.up[w].some(u => u.t === 'dh' && ov(a, b, u.s, u.w))) { const hw = Math.min(90, Math.max(60, b)); P.up[w].push({ id: uid++, t: 'dh', s: a + b / 2 - hw / 2, w: hw }); } }); }
-      toast(v === 'dd' ? 'Muldenlüfter gewählt – er saugt direkt am Kochfeld ab, die Haube entfällt.' : 'Normales Kochfeld – die Haube hängt wieder darüber.');
+      toast(v === 'dd' ? (koN ? 'Muldenlüfter und Backofen in einem Schrank geht nicht – unter dem Kochfeld sind jetzt Auszüge. Den Backofen gibt es unter „Hoch“ auf Augenhöhe.' : 'Muldenlüfter gewählt – er saugt direkt am Kochfeld ab, die Haube entfällt.')
+        : koWhy ? 'Herd mit Backofen darunter geht nicht mit Muldenlüfter – das Kochfeld bekommt wieder eine Haube.' : 'Normales Kochfeld – die Haube hängt wieder darüber.');
     }
     if (eqSel && eqSel.k === 'dh' && k === 'hobV' && v === 'dd') eqSel = null;
     if (['back', 'backC', 'backWood', 'backLed', 'sink', 'tap', 'hood', 'pfDek', 'wgDek', 'gripEnd'].includes(k)) xfade();
@@ -1522,7 +1560,7 @@
   /* ---------------- Toast ---------------- */
   const tst = $('[data-kp-toast]'); let tT = 0;
   // Meldungs-Ruhe (28.10.): Probleme und „Rückgängig“ immer; reine Bestätigungen/Anleitungen nur einmal je Gerät; am Handy höchstens eine Info alle 12 s
-  const ONCE = /eingesetzt|übernommen|^Abgestimmt|sind offen|^Alles wieder zu|Muldenlüfter gewählt|^Normales Kochfeld|^Tipp:|Ihr Motiv ist jetzt|ist wieder da/, PROB = /kein(en)? (freien )?Platz|zu lang|passen nicht|passt nicht|Achtung|nicht öffnen|geht es nicht|im Weg|nicht mehr unter|nur in die Ecken|gibt es in L-/;
+  const ONCE = /eingesetzt|übernommen|^Abgestimmt|sind offen|^Alles wieder zu|Muldenlüfter gewählt|^Normales Kochfeld|^Tipp:|Ihr Motiv ist jetzt|ist wieder da/, PROB = /kein(en)? (freien )?Platz|zu lang|geht nicht|passen nicht|passt nicht|Achtung|nicht öffnen|geht es nicht|im Weg|nicht mehr unter|nur in die Ecken|gibt es in L-/;
   let infoT = 0; const onceGet = () => { try { return JSON.parse(localStorage.getItem('kp-once') || '[]'); } catch (e) { return []; } };
   function quiet(msg, und) {
     if (und || PROB.test(msg)) return false;
@@ -1592,8 +1630,9 @@
     const isl = P.form === 'insel';
     has('sp') || (isl && P.island.v === 'spuele') ? ok('Spüle') : warn('Noch keine Spüle – einfach reinziehen');
     has('kf') || has('ko') || (isl && P.island.v === 'kochfeld') ? ok('Kochfeld') : warn('Noch kein Kochfeld oder Herd');
+    if (isDD() && has('ko')) warn('Muldenlüfter und Backofen passen nicht in einen Schrank – beim Herd „Normal“ wählen oder das Kochfeld über Auszüge setzen');
     has('kue') ? ok('Kühlschrank') : warn('Noch kein Kühlschrank');
-    for (const w in P.rows) { const f = free(w); if (f < -0.5) warn(`${WN[w]} ist ${Math.round(-f)} cm zu lang`); }
+    for (const w in P.rows) { const f = free(w); if (f < -0.5) warn(`Die Küche ${WAN[w]} ist ${Math.round(-f)} cm zu lang für die Wand`); }
     const gs = all.filter(x => x.m.t === 'gs');
     if (gs.length && has('sp')) { const adj = gs.some(g => { const r = P.rows[g.w]; return (r[g.i - 1] && r[g.i - 1].t === 'sp') || (r[g.i + 1] && r[g.i + 1].t === 'sp'); }); adj ? ok('Spülmaschine neben der Spüle') : warn('Spülmaschine gehört direkt neben die Spüle'); }
     for (const w in P.rows) { const r = P.rows[w], a = r.findIndex(x => x.t === 'sp'), b = r.findIndex(x => x.t === 'kf' || x.t === 'ko'); if (a >= 0 && b >= 0) { const [lo, hi] = a < b ? [a, b] : [b, a]; const mid = r.slice(lo + 1, hi); const wd = mid.filter(x => M[x.t].h === 'b').reduce((s, x) => s + x.w, 0); if (mid.some(x => M[x.t].h === 't')) warn('Hochschrank zwischen Spüle und Kochfeld'); else wd >= 60 ? ok(`${wd} cm Arbeitsfläche zum Schnippeln`) : warn(`Nur ${wd} cm Platz zwischen Spüle und Kochfeld – 60 bis 120 cm sind ideal`); } }
@@ -2242,7 +2281,7 @@
      Die Bühne dockt beim Runterscrollen verkleinert unter den Planer-Kopf. Griff: ziehen = Größe, tippen = einklappen. */
   (function () {
     const st = $('.kp-stage'), hd = $('.kp-head'); if (!st || !hd || !window.matchMedia) return;
-    const mq = matchMedia('(max-width:999px)'), H = document.documentElement; let big = false;
+    const mq = matchMedia('(max-width:999px)'), land = matchMedia('(max-width:999px) and (orientation:landscape) and (max-height:560px)'), H = document.documentElement; let big = false;
     try { big = localStorage.getItem('kp-pip-big') === '1'; } catch (e) { }
     const ph = document.createElement('div'); ph.className = 'kp-stph'; ph.setAttribute('aria-hidden', 'true'); st.parentNode.insertBefore(ph, st);
     const bar = document.createElement('div'); bar.className = 'kp-dock';
@@ -2255,7 +2294,8 @@
     function apply() { st.classList.toggle('kp-pipbig', big); const top = Math.round(hd.getBoundingClientRect().bottom); root.style.setProperty('--dkt', top + 'px'); root.style.setProperty('--dkh', (mini ? 0 : (hh || defH())) + 'px'); st.classList.toggle('kp-dkmini', mini); }
     function set(v) { if (v === on) return; on = v; if (v) ph.style.height = st.offsetHeight + 'px'; st.classList.toggle('kp-docked', v); ph.classList.toggle('on', v); root.classList.toggle('kp-dockon', v); if (v) apply(); }
     function upd() {
-      raf = 0; if (blocked()) { set(false); return; }
+      raf = 0; root.style.setProperty('--kpt', Math.round(hd.getBoundingClientRect().bottom) + 'px');
+      if (blocked() || land.matches) { set(false); return; }
       const ref = (on ? ph : st).getBoundingClientRect(), top = hd.getBoundingClientRect().bottom, end = root.getBoundingClientRect().bottom;
       // Handy: dockt unter den Kopf · PC: schwebt als Mini-3D unten rechts, sobald die große Ansicht aus dem Bild ist
       if (mq.matches) set(ref.bottom < top + ref.height * .45 && end > top + 320);

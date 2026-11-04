@@ -844,3 +844,42 @@ html.kp-lv-on{overflow:hidden}
 @keyframes kpIhPop{from{transform:scale(.2);opacity:0}}
 @keyframes kpIhSweep{0%{transform:translateX(0)}60%,100%{transform:translateX(var(--sw,400px))}}
 @media (prefers-reduced-motion:reduce){.kp-ih *{animation:none!important}}
+/* Eigenes Motiv verschieben: Steuerkreuz + Größe */
+.kp-mvpad{display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:4px;grid-template-areas:". u ." "l c r" ". d ."}
+.kp-mvpad [data-v="u"]{grid-area:u}.kp-mvpad [data-v="l"]{grid-area:l}.kp-mvpad [data-v="c"]{grid-area:c}.kp-mvpad [data-v="r"]{grid-area:r}.kp-mvpad [data-v="d"]{grid-area:d}
+.kp-mv{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:700 17px var(--sans);color:var(--ink);cursor:pointer;touch-action:manipulation}
+.kp-mv:hover:not(:disabled){border-color:var(--copper);background:#fff6ef}.kp-mv:active:not(:disabled){transform:scale(.94)}.kp-mv:disabled{opacity:.35;cursor:default}
+.kp-mvz{display:flex;align-items:center;gap:8px;margin-left:10px}.kp-mvz span{min-width:46px;text-align:center;font:700 13px var(--sans)}
+.kp-eqrow .kp-mvpad,.kp-eqblk .kp-mvpad{flex:none}
+
+/* ---- Handy quer: eine Bildschirmhöhe wie eine App – 3D links, Wand und Bedienung rechts ---- */
+@media (max-width:999px) and (orientation:landscape) and (max-height:560px){
+  body:has(.kp) .hdr{display:none}
+  .kp{padding-top:0;height:100svh;min-height:0;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"head head" "stage build" "stage panel"}
+  .kp:not([data-step="1"]){grid-template-rows:auto auto minmax(0,1fr)}
+  .kp-head{position:relative;top:0;padding:4px 10px}.kp-ic{width:36px;height:36px}
+  .kp-stage{height:auto;min-height:0;border-bottom:0;border-right:1px solid var(--line)}
+  .kp-stph,.kp-stph.on{display:none}
+  .kp-live{display:none}
+  .kp-cams{right:8px;bottom:8px;left:8px;justify-content:flex-end;flex-wrap:wrap}.kp-cams button{padding:6px 9px;font-size:11.5px}
+  .kp-build{padding:8px 10px 6px;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+  .kp:not([data-step="1"]) .kp-build{max-height:44svh}
+  .kp-wall svg{max-height:calc(100svh - 230px);width:auto;max-width:100%;display:block;margin:0 auto}
+  .kp-tips{margin-top:6px}.kp-tips li{padding:5px 10px 5px 6px;font-size:12px}
+  .kp-panel{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 12px 24px}
+  .kp[data-step="1"] .kp-panel{position:static;overflow:visible;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
+  .kp[data-step="1"] .kp-pane.on{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cats next" "pal pal";align-items:center;column-gap:6px}
+  .kp[data-step="1"] .kp-cats{grid-area:cats;margin:0 0 6px 10px;overflow-x:auto;scrollbar-width:none}.kp[data-step="1"] .kp-cats::-webkit-scrollbar{display:none}
+  .kp-cats button{min-height:30px;font-size:12px}
+  .kp[data-step="1"] .kp-pal{grid-area:pal}.kp[data-step="1"] .kp-cath{display:none}
+  .kp[data-step="1"] .kp-tile{flex-basis:70px;padding:5px 3px 6px}.kp[data-step="1"] .kp-tile svg{height:32px}.kp[data-step="1"] .kp-tile svg.b{height:22px;margin-top:10px}.kp[data-step="1"] .kp-tile b{font-size:11px}
+  .kp[data-step="1"] .kp-next{grid-area:next;margin:0 10px 6px 0}
+  .kp[data-step="1"] .kp-next .btn{min-height:34px;padding:6px 14px;font-size:13px;white-space:nowrap}.kp-nxl{display:none}
+  .kp[data-step="1"] .kp-build .kpx{display:none}
+  .kp-build .kpx{flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -10px 6px;padding:0 10px}.kp-build .kpx::-webkit-scrollbar{display:none}
+  .kp-build .kpx-hero{flex:none;min-height:36px;padding:4px 12px 4px 8px;border-radius:12px;gap:8px}.kp-build .kpx-hero small{display:none}.kp-build .kpx-hero b{font-size:13px}
+  .kp-build .kpx-row{flex:none;flex-wrap:nowrap;overflow:visible;margin:0;padding:0;gap:6px}.kp-build .kpx-row button{min-height:36px;padding:0 10px;font-size:12px}
+  .kp-acts{left:8px;top:8px;bottom:auto;flex-direction:column;align-items:flex-start;gap:5px}.kp-acts button{padding:5px 10px 5px 7px;font-size:11.5px;white-space:nowrap}.kp-acts svg{width:16px;height:16px}
+  .kp-toast{top:auto;bottom:12px;left:auto;right:12px;max-width:46vw;transform:translateY(140%)}.kp-toast.on{transform:none}
+  .kp-trash{top:auto;bottom:16px}
+}
