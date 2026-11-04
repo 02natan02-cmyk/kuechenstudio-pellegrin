@@ -728,13 +728,25 @@
     if (P.form === 'insel') wallsEl.insertAdjacentHTML('beforeend', islandCard());
     renderPlan(); renderPop();
   }
+  // Insel: Lage und Maße (cm). g = Durchgang zur Küchenzeile, x = seitlicher Versatz zur Raummitte, d = Tiefe
+  function isl() {
+    const W = P.room.w, D = P.room.d, I = P.island, w = I.w, d = I.d || 100;
+    const g = Math.max(80, Math.min(I.g != null ? I.g : 115, D - 60 - d - 70));
+    const x = Math.max(w / 2 + 20, Math.min(W - w / 2 - 20, W / 2 + (I.x || 0)));
+    return { w, d, g, x, z: 60 + g + d / 2 };
+  }
   function islandCard() {
-    const I = P.island; return `<div class="kp-isl" data-isl><b>Kochinsel</b><div class="kp-step"><button type="button" data-isw="-">−</button><span>${I.w} cm breit</span><button type="button" data-isw="+">+</button></div><div class="kp-seg">${[['kochfeld', 'Mit Kochfeld'], ['spuele', 'Mit Spüle'], ['frei', 'Nur Arbeitsfläche']].map(([k, n]) => `<button type="button" data-isv="${k}" class="${I.v === k ? 'on' : ''}">${n}</button>`).join('')}</div>${I.v === 'kochfeld' ? `<div class="kp-eqs kp-eqs-isl">${IHOODS.map(([v, n, d]) => chip('ihood', v, eqv('ihood', 'mulde') === v, IC.hood(v), n)).join('')}</div>` : ''}</div>`;
+    const I = P.island, g = isl(); return `<div class="kp-isl" data-isl><b>Kochinsel</b><p class="kp-isl-h">Größe und Lage – oder im Grundriss unten mit dem Finger verschieben</p><div class="kp-isl-g">${[["w", "Breite", g.w + " cm"], ["d", "Tiefe", g.d + " cm"], ["g", "Durchgang zur Zeile", g.g + " cm"], ["x", "Seitlich", Math.abs(Math.round(g.x - P.room.w / 2)) < 5 ? "mittig" : Math.abs(Math.round(g.x - P.room.w / 2)) + " cm " + (g.x < P.room.w / 2 ? "links" : "rechts")]].map(([k, n, v]) => `<div class="kp-step kp-isl-s"><small>${n}</small><button type="button" data-isa="${k}" data-d="-1" aria-label="${n} verringern">${k === "x" ? "←" : "−"}</button><span>${v}</span><button type="button" data-isa="${k}" data-d="1" aria-label="${n} erhöhen">${k === "x" ? "→" : "+"}</button></div>`).join("")}</div>${g.g < 100 ? '<p class="kp-isl-w">Tipp: Mit unter 100 cm Durchgang wird es eng, wenn zwei Personen kochen oder Türen und Spülmaschine offen sind.</p>' : ""}<div class="kp-seg">${[['kochfeld', 'Mit Kochfeld'], ['spuele', 'Mit Spüle'], ['frei', 'Nur Arbeitsfläche']].map(([k, n]) => `<button type="button" data-isv="${k}" class="${I.v === k ? 'on' : ''}">${n}</button>`).join('')}</div>${I.v === 'kochfeld' ? `<div class="kp-eqs kp-eqs-isl">${IHOODS.map(([v, n, d]) => chip('ihood', v, eqv('ihood', 'mulde') === v, IC.hood(v), n)).join('')}</div>` : ''}</div>`;
   }
   tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-wt]'); if (!b) return; curWall = b.dataset.wt; sel = null; renderWalls(); });
   wallsEl.addEventListener('click', e => {
-    const a = e.target.closest('[data-isw]'), v = e.target.closest('[data-isv]');
-    if (a) { const ws = [120, 150, 180, 210, 240, 270]; let i = ws.indexOf(P.island.w); i = Math.max(0, Math.min(ws.length - 1, i + (a.dataset.isw === '+' ? 1 : -1))); P.island.w = ws[i]; change(); }
+    const a = e.target.closest('[data-isa]'), v = e.target.closest('[data-isv]');
+    if (a) { const k = a.dataset.isa, dd = +a.dataset.d, I = P.island, g = isl();
+      if (k === 'w') I.w = Math.max(100, Math.min(Math.min(300, P.room.w - 60), g.w + dd * 10));
+      if (k === 'd') I.d = Math.max(80, Math.min(130, g.d + dd * 10));
+      if (k === 'g') I.g = Math.max(80, Math.min(180, g.g + dd * 5));
+      if (k === 'x') I.x = Math.round(g.x - P.room.w / 2 + dd * 10);
+      const n = isl(); I.x = Math.round(n.x - P.room.w / 2); I.g = n.g; change(); }
     if (v) { P.island.v = v.dataset.isv; change(); }
   });
 
@@ -1289,7 +1301,7 @@
     if (!planEl) return;
     const W = P.room.w, D = P.room.d; let s = `<rect x="0" y="0" width="${W}" height="${D}" fill="#f7f2ea"/>`;
     for (const w in P.rows) { const X = xs(w); P.rows[w].forEach((m, i) => { const x = X[i]; const [cx, cy, cw, ch] = cabR(w, x, m.w, 60), tall = M[m.t].h === 't'; s += `<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" fill="${tall ? '#cdbfab' : '#e6dccd'}" stroke="#a89880" stroke-width="1.2"/>`; if (m.t === 'ek') { const cs = cornerSide(w, i); s += `<rect x="${cs === 'r' ? W - 60 : 0}" y="60" width="60" height="30" fill="#e6dccd" stroke="#a89880" stroke-width="1.2"/>`; } const mx = cx + cw / 2, my = cy + ch / 2; if (m.t === 'sp') s += `<rect x="${mx - 17}" y="${my - 14}" width="34" height="28" rx="6" fill="#fff" stroke="#8d9296" stroke-width="1.5"/>`; if (m.t === 'kf' || m.t === 'ko') [[-11, -11], [11, -11], [-11, 11], [11, 11]].forEach(([a, b]) => s += `<circle cx="${mx + a}" cy="${my + b}" r="7" fill="none" stroke="#45474b" stroke-width="1.6"/>`); if (m.t === 'kue') s += `<text x="${mx}" y="${my + 5}" font-size="15" text-anchor="middle" fill="#6e655b" font-family="system-ui">❄</text>`;  }); }
-    if (P.form === 'insel') { const z = Math.max(210, Math.min(D - 120, 225)); s += `<rect x="${W / 2 - P.island.w / 2}" y="${z - 50}" width="${P.island.w}" height="100" rx="4" fill="#e6dccd" stroke="#a89880" stroke-width="1.2"/>`; }
+    if (P.form === 'insel') { const g = isl(); s += `<g data-isp style="cursor:move"><rect x="${g.x - g.w / 2}" y="${g.z - g.d / 2}" width="${g.w}" height="${g.d}" rx="4" fill="#e6dccd" stroke="${ACC}" stroke-width="2.4" stroke-dasharray="7 5"/><text x="${g.x}" y="${g.z + 6}" text-anchor="middle" font-size="18" font-weight="600" fill="#6b6359" pointer-events="none">Insel ✥</text><line x1="${g.x}" y1="60" x2="${g.x}" y2="${g.z - g.d / 2}" stroke="#9f978a" stroke-width="1.5" stroke-dasharray="4 4" pointer-events="none"/><text x="${g.x + 6}" y="${60 + g.g / 2 + 6}" font-size="15" fill="#6b6359" pointer-events="none">${g.g} cm</text></g>`; }
     s += `<rect x="-6" y="-6" width="${W + 12}" height="${D + 12}" fill="none" stroke="#2b2724" stroke-width="12"/>`;
     P.op.forEach(o => {
       const [x1, y1, x2, y2] = seg(o.wall, o.s, o.w), [nx, ny] = INW[o.wall], on = selOp === o.id, c = on ? ACC : '#4f8fc6', ink = on ? ACC : '#2b2724';
@@ -1340,6 +1352,16 @@
     const wall = Object.keys(d).sort((a, b) => d[a] - d[b])[0], along = { N: p.x, S: W - p.x, W: D - p.y, E: p.y }[wall];
     c.wall = wall; c.s = clampCx(c, along); renderWalls();
   }
+  if (planEl) planEl.addEventListener('pointerdown', e => {
+    const ip = e.target.closest('[data-isp]'); if (!ip) return; e.preventDefault(); e.stopImmediatePropagation();
+    const svg = planEl.querySelector('svg'), m = svg.getScreenCTM(); if (!m) return; const inv = m.inverse(), pt = svg.createSVGPoint();
+    const toCm = ev => { pt.x = ev.clientX; pt.y = ev.clientY; const q = pt.matrixTransform(inv); return [q.x, q.y]; };
+    const g0 = isl(), [x0, y0] = toCm(e); let raf = 0;
+    try { planEl.setPointerCapture(e.pointerId); } catch (er) { }
+    const mv = ev => { const [x, y] = toCm(ev); P.island.x = Math.round((g0.x + x - x0 - P.room.w / 2) / 5) * 5; P.island.g = Math.round((g0.g + y - y0) / 5) * 5; const n = isl(); P.island.x = Math.round(n.x - P.room.w / 2); P.island.g = n.g; if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderPlan(); }); };
+    const up = () => { planEl.removeEventListener('pointermove', mv); planEl.removeEventListener('pointerup', up); planEl.removeEventListener('pointercancel', up); change(); };
+    planEl.addEventListener('pointermove', mv); planEl.addEventListener('pointerup', up); planEl.addEventListener('pointercancel', up);
+  }, true);
   if (planEl) planEl.addEventListener('pointerdown', e => { const gc = e.target.closest('[data-cxp]'); if (gc) { startDrag(e, 'cxplan', { cid: +gc.dataset.cxp }); e.preventDefault(); return; } const g = e.target.closest('[data-pop]'); if (!g) { if (selOp || selCx) { selOp = null; selCx = null; renderWalls(); } return; } startDrag(e, 'plan', { oid: +g.dataset.pop }); e.preventDefault(); });
   function addOp(t) {
     if (P.op.length >= 8) { toast('Mehr als 8 Fenster und Türen passen nicht in den Plan.'); return; }
@@ -1384,7 +1406,7 @@
   function sweepHits(o) {
     const W = P.room.w, D = P.room.d, ah = P.ah || 90, z0 = opY(o) + 2, z1 = opY(o) + opHH(o) - 2, R = [];
     for (const w in P.rows) { if (w === o.wall) continue; const X = xs(w); P.rows[w].forEach((m, i) => { const t = M[m.t].h === 't'; R.push([...cabR(w, X[i], m.w, 60), 0, t ? hOf(m) + axOf(m) : ah]); }); upList(w).forEach(u => { if (u.t === 'dh') return; const { bottom, h } = upY(u); R.push([...cabR(w, u.s, u.w, 35), bottom, bottom + h]); }); }
-    if (P.form === 'insel') { const z = Math.max(60 + 100 + 50, Math.min(D - 120, 60 + 115 + 50)); R.push([W / 2 - P.island.w / 2, z - 50, P.island.w, 100, 0, 90]); }
+    if (P.form === 'insel') { const g = isl(); R.push([g.x - g.w / 2, g.z - g.d / 2, g.w, g.d, 0, 90]); }
     const rel = R.filter(r => r[4] < z1 && r[5] > z0); if (!rel.length) return false;
     const [nx, ny] = INW[o.wall], P0 = a => seg(o.wall, a, 0);
     return opWings(o).some(f => { const [hx, hy] = P0(f.h), [lx, ly] = P0(f.l), ux = (lx - hx) / f.r, uy = (ly - hy) / f.r;
@@ -1496,7 +1518,7 @@
         else { const { bottom, h } = upY(u); items.push({ t: 'cab', id: u.id, label: label(u), kind: 'u', w: u.w, h, y0: bottom, led: u.t !== 'ho', ...spec(u), ...pos(w, u.s + u.w / 2, 35) }); }
       });
     }
-    if (P.form === 'insel') { const z = Math.max(60 + 100 + 50, Math.min(D - 120, 60 + 115 + 50)); items.push({ t: 'in', w: P.island.w, d: 100, v: P.island.v, dekor: P.style.wgDek || 'top', ih: eqv('ihood', 'mulde'), hob: eqv('hobW', 80) - 2, x: W / 2, z, r: 0 }); }
+    if (P.form === 'insel') { const g = isl(), z = g.z; items.push({ t: 'in', w: g.w, d: g.d, v: P.island.v, dekor: P.style.wgDek || 'top', ih: eqv('ihood', 'mulde'), hob: eqv('hobW', 80) - 2, x: g.x, z, r: 0 }); }
     P.op.forEach(o => { const d = { fl: opFl(o), a: opA(o), k: opK(o), dir: opDir(o) }; open.push(o.t === 'fenster' ? { t: 'fenster', wall: o.wall, s: o.s, w: o.w, y: opY(o), h: opHH(o), ...d } : o.t === 'balkon' ? { t: 'balkon', wall: o.wall, s: o.s, w: o.w, y: 0, h: opHH(o), ...d } : { t: 'tuer', wall: o.wall, s: o.s, w: o.w, ...d }); });
     // Heizkörper (Bestand oder neu) – als flacher Plattenheizkörper an der Wand
     (P.cx || []).filter(c => c.t === 'heiz').forEach(c => items.push({ t: 'hz', wall: c.wall, w: hzW(c), h: hzH(c), y0: hzY(c), ...pos(c.wall, c.s, 10) }));
@@ -1802,7 +1824,7 @@
       form: P.form, formName: FORMS[P.form].n, raum: { breite: W, tiefe: D, hoehe: H },
       arbeitshoehe: ah, sockel: 10 + ah - 90, arbeitsplatte: 4, waende, oeffnungen: P.op.map(opOf),
       anschluesse: (P.cx || []).map(c => ({ typ: c.t, name: CXN[c.t], wand: c.wall, abWand: c.s, hoehe: Math.round(cxH(c)), bestand: !c.neu, neu: !!c.neu, ...(c.t === 'dose' ? { fach: cxN(c), lage: cxO(c) === 'v' ? 'senkrecht' : 'waagerecht', bereich: cxZone(c) } : {}), ...(c.t === 'abluft' ? { durchmesser: cxD(c), bereich: cxZone(c) } : {}), ...(c.t === 'heiz' ? { breite: hzW(c), koerperHoehe: hzH(c), bodenabstand: hzY(c) } : {}) })),
-      insel: P.form === 'insel' ? { breite: P.island.w, tiefe: 100, hoehe: 90, variante: P.island.v, mitteX: W / 2, mitteZ: Math.max(210, Math.min(D - 120, 225)) } : null,
+      insel: P.form === 'insel' ? (() => { const g = isl(); return { breite: g.w, tiefe: g.d, hoehe: 90, variante: P.island.v, mitteX: g.x, mitteZ: g.z, durchgang: g.g }; })() : null,
       stil: { ...P.style, ausgangsstil: LK ? LK[1] : null, front: frontName(P.style), farbwelt: (WORLDS.find(w => w.k === worldOf(P.style)) || { n: 'Wunschfarbe' }).n, frontHex: P.style.wood ? null : P.style.front, studioHinweisFront: herstHint(P.style) || null, griffe: (HANDLES.find(h => h[0] === P.style.handle) || ['', ''])[1], arbeitsplatteName: (TOPS.find(t => t[0] === P.style.top) || ['', ''])[1] },
       ausstattung: eqData(),
       zusammenfassung: summary(),
@@ -1825,7 +1847,7 @@
       });
     }
     for (const w in P.rows) upList(w).forEach(u => { if (u.t === 'dh') return; nCab++; upLen += u.w; vol += u.w * hOf(u) * 32 / 1000 * (STOR[u.t] ?? 1); });
-    if (P.form === 'insel') { const I = P.island, z = Math.max(60 + 100 + 50, Math.min(D - 120, 60 + 115 + 50)), occ = I.v === 'frei' ? 0 : 80; top += I.w; free += I.w - occ; best = Math.max(best, I.w - occ); vol += I.w * (ah - 14) * 70 / 1000 * .8; nCab++;
+    if (P.form === 'insel') { const I = P.island, z = isl().z, occ = I.v === 'frei' ? 0 : 80; top += I.w; free += I.w - occ; best = Math.max(best, I.w - occ); vol += I.w * (ah - 14) * 70 / 1000 * .8; nCab++;
       if (I.v === 'spuele' && !at.sp) at.sp = [W / 2, z]; if (I.v === 'kochfeld' && !at.kf) at.kf = [W / 2, z]; }
     const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]), tri = at.sp && at.kf && at.kue ? Math.round(d(at.sp, at.kf) + d(at.kf, at.kue) + d(at.kue, at.sp)) : null;
     const dev = [], isl = P.form === 'insel' ? P.island.v : null;
@@ -1856,7 +1878,7 @@
       { const TR = trims(w); L.push(`${WN[w]} unten: ` + ([...P.rows[w].map((m, i) => descr(m, cornerSide(w, i))), ...TR.pf.map(q => `Passstück ${Math.round(q.w)} cm ${q.where}${q.tall ? ' (hoch)' : ''}`), ...TR.wg.map(q => `Seitenwange ${q.side} (${(P.style.wgDek || 'top') === 'top' ? 'Arbeitsplattendekor' : 'Frontfarbe'})`)].join(' · ') || '–')); }
       const ups = upList(w); L.push(`${WN[w]} oben${P.up[w] ? '' : ' (automatisch)'}: ` + (ups.length ? [...ups].sort((a, b) => a.s - b.s).map(u => descr(u, null, true)).join(' · ') : 'keine Hängeschränke'));
     }
-    if (P.form === 'insel') L.push(`Insel: ${P.island.w} cm, ${({ kochfeld: 'mit Kochfeld', spuele: 'mit Spüle', frei: 'freie Arbeitsfläche' })[P.island.v]}`);
+    if (P.form === 'insel') L.push(`Insel: ${isl().w} × ${isl().d} cm, ${isl().g} cm Durchgang zur Zeile, ${({ kochfeld: 'mit Kochfeld', spuele: 'mit Spüle', frei: 'freie Arbeitsfläche' })[P.island.v]}`);
     L.push(`Arbeitshöhe: ${P.ah || 90} cm`);
     if (P.op.length) L.push('Fenster & Türen: ' + P.op.map(o => `${OPN[o.t]} ${o.w} cm (${WN[o.wall]}, ab ${o.s} cm; ${opDesc(o)})`).join(' · '));
     const cxL = c => `${CXN[c.t]}${cxSpec(c) ? ' ' + cxSpec(c) : ''} (${WN[c.wall]}, Mitte ${c.s} cm von links${c.t === 'heiz' ? '' : `, ${Math.round(cxH(c))} cm hoch`})`;

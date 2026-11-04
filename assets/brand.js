@@ -164,3 +164,87 @@ addEventListener('keydown', e => { if (e.key !== 'Escape') return; const b = doc
   if (!('IntersectionObserver' in window)) return go();
   new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); go(); } }, { threshold: .25 }).observe(sec);
 })();
+
+/* Öffnungszeiten-Küchenrolle */
+(() => {
+  const H = { 1: [600, 990], 2: [600, 990], 3: [600, 840], 4: [600, 990], 5: [600, 990], 6: [540, 720] };
+  const DN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  const f = m => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`.replace(':00', '');
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const now = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date()).map(x => [x.type, x.value])); return { d: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday), m: (+p.hour % 24) * 60 + +p.minute }; };
+  function info() {
+    const { d, m } = now(), h = H[d];
+    if (h && m >= h[0] && m < h[1]) return { open: true, d, t: `Jetzt geöffnet – heute bis ${f(h[1])} Uhr.` };
+    let k = h && m < h[0] ? 0 : 1; while (!H[(d + k) % 7]) k++;
+    const nd = (d + k) % 7, w = k === 0 ? 'heute' : k === 1 ? 'morgen' : k === 2 ? 'übermorgen' : 'am ' + DN[nd];
+    return { open: false, d, t: `Gerade geschlossen – ${w} ab ${f(H[nd][0])} Uhr wieder für Sie da.` };
+  }
+  const sheetHTML = () => { const i = info(); return `<div class="oz-pg"><div class="oz-in"><p class="oz-k">Öffnungszeiten</p><p class="oz-now${i.open ? ' open' : ''}"><i></i><span>${i.t}</span></p><p class="oz-h">Für eine Küche nimmt man sich Zeit.</p><p class="oz-p">Vereinbaren Sie einen Termin – oder kommen Sie spontan vorbei und lassen Sie sich in unserer Ausstellung inspirieren.</p><ul class="oz-l">${[1, 2, 3, 4, 5, 6, 0].map(d => `<li class="${d === i.d ? 't' : ''}${H[d] ? '' : ' x'}"><b>${DN[d]}</b><span>${H[d] ? f(H[d][0]) + '–' + f(H[d][1]) + ' Uhr' : 'nach Vereinbarung'}</span></li>`).join('')}</ul><div class="oz-b"><a href="index.html#termin">Termin vereinbaren</a><a href="tel:+4968519397460">Anrufen</a></div></div></div><div class="oz-perf"></div><span class="oz-tear">abreißen ↓</span><div class="oz-lip"></div>`; };
+  let el, roll, sh, pp, src = null, T = [], state = 'off', stay = false, y0 = 0;
+  const clear = () => { T.forEach(clearTimeout); T = []; };
+  const later = (fn, ms) => T.push(setTimeout(fn, RM ? 0 : ms));
+  function build() {
+    el = document.createElement('div'); el.className = 'oz'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Öffnungszeiten');
+    el.innerHTML = '<div class="oz-roll" aria-hidden="true"><img src="img/oz/rolle.webp" alt="" width="640" height="250" decoding="async"></div><div class="oz-sh"><div class="oz-pp"></div></div>';
+    document.body.appendChild(el); roll = el.querySelector('.oz-roll'); sh = el.querySelector('.oz-sh'); pp = el.querySelector('.oz-pp');
+    el.addEventListener('mouseleave', () => { if (stay && state === 'open') later(tear, 450); });
+    el.addEventListener('mouseenter', () => { if (state === 'open') clear(); });
+    document.addEventListener('pointerdown', e => { if (state === 'open' && !el.contains(e.target) && !e.target.closest('.hdr .status')) tear(); });
+    addEventListener('keydown', e => { if (e.key === 'Escape' && state === 'open') tear(); });
+    addEventListener('scroll', () => { if (state === 'open' && Math.abs(scrollY - y0) > 80) tear(); }, { passive: true });
+    new Image().src = 'img/oz/blatt.webp';
+  }
+  function anchor() {
+    src = [...document.querySelectorAll('.hdr .status')].find(x => x.offsetParent) || null;
+    const hb = (document.querySelector('.hdr') || document.body).getBoundingClientRect(), w = 300 * (innerWidth <= 860 ? .9 : 1);
+    let x = src ? (() => { const r = src.getBoundingClientRect(); return r.left + r.width / 2 - w / 2; })() : innerWidth - w - 10;
+    x = Math.max(8, Math.min(innerWidth - w - 8, x)); el.style.left = x + 'px'; el.style.top = Math.round(Math.max(0, hb.bottom) - 26) + 'px';
+    return src ? src.getBoundingClientRect() : null;
+  }
+  // Rolle wächst aus der Statusanzeige heraus, dann rollt das Blatt ab
+  function open(keep) {
+    if (!el) build(); clear(); if (state === 'open' || state === 'opening') { stay = stay || keep; return; }
+    state = 'opening'; stay = !!keep; y0 = scrollY; el.hidden = false; el.classList.add('on'); el.classList.remove('done', 'stay');
+    pp.classList.add('fast'); pp.style.setProperty('--h', '0px'); pp.innerHTML = sheetHTML(); void pp.offsetWidth; pp.classList.remove('fast');
+    const r = anchor(), er = el.getBoundingClientRect();
+    if (src) src.classList.add('oz-src');
+    if (!RM && r && roll.animate) {
+      const dx = r.left + r.width / 2 - (er.left + 150), dy = r.top + r.height / 2 - (er.top + 50);
+      roll.animate([{ transform: `translate(${dx}px,${dy}px) scale(.12) rotate(-8deg)`, opacity: 0 }, { transform: 'translate(0,6px) scale(1.04) rotate(1deg)', opacity: 1, offset: .7 }, { transform: 'none', opacity: 1 }], { duration: 620, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' });
+    } else roll.style.opacity = 1;
+    later(() => { el.classList.add('turn'); const hh = pp.querySelector('.oz-in').offsetHeight + 8; pp.style.setProperty('--h', hh + 'px'); }, 420);
+    later(() => { el.classList.remove('turn'); el.classList.add('done'); el.classList.toggle('stay', stay); state = 'open'; if (src) src.classList.remove('oz-src');
+      if (!stay && sh.animate && !RM) sh.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-2.4deg)' }, { transform: 'rotate(1.8deg)' }, { transform: 'rotate(-.8deg)' }, { transform: 'rotate(0)' }], { duration: 900, easing: 'ease-in-out' });
+      if (!stay) later(tear, 3400); }, 1600);
+  }
+  // Blatt reißt an der Perforation ab und fällt flatternd nach unten; die Rolle verschwindet in der Statusanzeige
+  function tear() {
+    if (state !== 'open') return; clear(); state = 'closing';
+    const rect = pp.getBoundingClientRect(), fall = document.createElement('div');
+    fall.className = 'oz-fall'; fall.style.cssText = `left:${rect.left}px;top:${rect.top + 4}px;width:${rect.width}px;height:${rect.height - 4}px;overflow:hidden;box-shadow:0 20px 30px -18px rgba(30,24,12,.45);clip-path:polygon(0 6px,6% 2px,12% 7px,19% 3px,26% 6px,33% 1px,41% 5px,48% 2px,56% 7px,63% 3px,71% 6px,78% 1px,86% 5px,93% 2px,100% 6px,100% 100%,0 100%)`;
+    const g = pp.querySelector('.oz-pg').cloneNode(true); g.style.top = '-4px'; fall.appendChild(g);
+    document.body.appendChild(fall);
+    pp.classList.add('fast'); pp.style.setProperty('--h', '0px');
+    if (RM) { fall.remove(); finish(); return; }
+    const t0 = performance.now(), side = Math.random() < .5 ? -1 : 1; let vy = -1.2, y = 0;
+    (function step(t) { const k = (t - t0) / 1000; vy += .55; y += vy; const x = side * (Math.sin(k * 3.2) * 28 + k * 30), rz = side * (Math.sin(k * 2.6) * 14 + k * 18), rx = Math.sin(k * 5.5) * 28;
+      fall.style.transform = `translate(${x}px,${y}px) rotate(${rz}deg) rotateX(${rx}deg)`; fall.style.opacity = Math.max(0, 1 - Math.max(0, k - .9) / .6);
+      if (k < 1.6 && y < innerHeight) requestAnimationFrame(step); else fall.remove(); })(t0);
+    later(finish, 320);
+  }
+  function finish() {
+    const r = src && src.offsetParent ? src.getBoundingClientRect() : null, er = el.getBoundingClientRect();
+    const done = () => { el.classList.remove('on', 'done', 'stay'); el.hidden = true; state = 'off'; };
+    if (!RM && r && roll.animate) { const dx = r.left + r.width / 2 - (er.left + 150), dy = r.top + r.height / 2 - (er.top + 50); const a = roll.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.12) rotate(10deg)`, opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.5,0,.7,.4)', fill: 'both' }); a.onfinish = done; src.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 420, delay: 420 }); }
+    else if (!RM && roll.animate) { const a = roll.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(-30px) scale(.6)' }], { duration: 420, fill: 'both' }); a.onfinish = done; }
+    else done();
+  }
+  document.addEventListener('click', e => { const s = e.target.closest('.hdr .status'); if (!s) return; e.preventDefault(); if (state === 'open') { stay = true; el.classList.add('stay'); return; } open(true); });
+  document.querySelectorAll('.hdr .status').forEach(s => { s.setAttribute('role', 'button'); s.setAttribute('tabindex', '0'); s.setAttribute('aria-label', 'Öffnungszeiten anzeigen'); s.title = 'Öffnungszeiten anzeigen'; s.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(true); } }); });
+  addEventListener('resize', () => { if (el && !el.hidden) anchor(); });
+  let seen = false; try { seen = sessionStorage.getItem('pel-oz2') === '1'; } catch (e) { }
+  if (seen || /planer\.html/.test(location.pathname)) return;
+  const start = () => { try { sessionStorage.setItem('pel-oz2', '1'); } catch (e) { } if (scrollY < 80) open(false); };
+  const wait = () => { const it = document.querySelector('.intro'); if (it && !it.classList.contains('gone')) return setTimeout(wait, 400); setTimeout(start, 1500); };
+  if (document.readyState === 'complete') wait(); else addEventListener('load', wait, { once: true });
+})();
