@@ -758,18 +758,22 @@
   const ISLT = [['us', '3 Schubladen'], ['s2', '2 Auszüge'], ['s4', '4 Schubladen'], ['ut', 'Schublade + Tür'], ['u1', 'Tür'], ['u2', '2 Türen'], ['ui', 'Innenschubladen'], ['gs', 'Spülmaschine'], ['mt', 'Mülltrenner'], ['ap', 'Apotheker']];
   const IKH2 = [['sitz', 'Sitzplatz'], ['schrank', 'Schränke'], ['regal', 'Offenes Regal'], ['wand', 'Glatte Rückwand']];
   const islKh = () => { const k = P.island.kh || 'sitz'; return ['schub', 'tuer', 'mix'].includes(k) ? 'schrank' : k; };
-  const islDepth = () => { const d = isl().d, kh = islKh(); const cf = kh === 'wand' ? d - 3 : (kh === 'schrank' || kh === 'regal') ? (d >= 100 ? 60 : Math.round(d / 2)) : Math.max(40, Math.min(60, d - 25)); return { cf, cb: d - cf }; };
+  const islDepth = () => { const d = isl().d, kh = islKh(), I = P.island;
+    if ((kh === 'schrank' || kh === 'regal') && I.cb && d - I.cb >= 40) return { cf: d - I.cb, cb: I.cb };   // Raumseite tiefengekürzt (Türen meist 35–40 cm)
+    const cf = kh === 'wand' ? d - 3 : (kh === 'schrank' || kh === 'regal') ? (d >= 100 ? 60 : Math.round(d / 2)) : Math.max(40, Math.min(60, d - 25)); return { cf, cb: d - cf }; };
+  const ICB = [30, 35, 40, 45, 50, 60];
   let iuid = 1;
   function islGen(kind, w) {
     const n = Math.max(1, Math.round(w / 60)), out = []; let left = w;
     for (let i = 0; i < n; i++) { const rest = n - i, ws = [30, 40, 45, 50, 60, 80, 90, 100, 120], want = left / rest; let best = ws.reduce((a, b) => Math.abs(b - want) < Math.abs(a - want) ? b : a); if (i === n - 1) best = ws.filter(v => v <= left).pop() || 30; best = Math.min(best, left); if (best < 15) break;
-      const t = kind === 'tuer' ? (best >= 60 ? 'u2' : 'u1') : kind === 'mix' ? (i % 2 ? (best >= 60 ? 'u2' : 'u1') : 'us') : 'us'; out.push({ id: iuid++, t, w: best }); left -= best; }
+      const t = kind === 'tuer' ? (best >= 80 ? 'u2' : 'u1') : kind === 'mix' ? (i % 2 ? (best >= 80 ? 'u2' : 'u1') : 'us') : 'us'; out.push({ id: iuid++, t, w: best }); left -= best; }
     return out;
   }
   function islMods(side) {
     const I = P.island, key = side === 'v' ? 'mv' : 'mh', w = isl().w;
     if (side === 'h' && islKh() !== 'schrank') return [];
-    if (!Array.isArray(I[key]) || !I[key].length) I[key] = islGen(side === 'v' ? (I.kv || 'schub') : (['schub', 'tuer', 'mix'].includes(I.kh) ? I.kh : (I.khT || 'schub')), w);
+    if (side === 'h' && !I.mhV) { if (Array.isArray(I.mh) && I.mh.every(m => m.t === 'us')) I.mh = []; I.mhV = 2; }
+    if (!Array.isArray(I[key]) || !I[key].length) I[key] = islGen(side === 'v' ? (I.kv || 'schub') : (['schub', 'tuer', 'mix'].includes(I.kh) ? I.kh : (I.khT || 'tuer')), w);
     I[key].forEach(m => { if (!m.id) m.id = iuid++; else iuid = Math.max(iuid, m.id + 1); });
     let sum = I[key].reduce((a, m) => a + m.w, 0); while (sum > w && I[key].length) { const m = I[key][I[key].length - 1], cut = Math.min(m.w - 15, sum - w); if (cut > 0 && m.w - cut >= 15) { m.w -= cut; sum -= cut; } else { sum -= m.w; I[key].pop(); } }
     return I[key];
@@ -782,6 +786,28 @@
     g += `<rect x="-2" y="${FL - 94 - dh}" width="${W + 4}" height="4" fill="${topCol()}"/>`;
     return `<svg class="kp-isl-sv" viewBox="-6 ${y0} ${W + 12} ${104 + dh}" preserveAspectRatio="xMidYMax meet" aria-label="Insel ${side === 'v' ? 'Kochseite' : 'Raumseite'}">${g}</svg>`;
   }
+  // Raumseite ohne Schränke: Bild statt leerer Fläche (Sitzplatz mit Hockern, Regal mit Dingen, glatte Rückwand mit Lichtschimmer)
+  function islHView(kh) {
+    const W = isl().w, dh = (P.ah || 90) - 90, y0 = FL - 96 - dh, top = FL - 94 - dh, wm = (P.style.wgDek || 'top') === 'top' ? topCol() : fcol(), sh = shade(wm, -.18);
+    let g = '';
+    if (kh === 'sitz') {
+      g += `<rect x="0" y="${top + 4}" width="${W}" height="${FL - top - 4}" fill="${wm}" stroke="${sh}" stroke-width=".5"/><rect x="0" y="${top + 4}" width="${W}" height="10" fill="rgba(0,0,0,.18)"/>`;
+      const n = Math.max(2, Math.min(4, Math.floor(W / 55))); for (let i = 0; i < n; i++) { const cx = W * (i + .5) / n, sy = FL - 66;
+        g += `<g class="kp-ih-st" style="--d:${.12 + i * .14}s"><ellipse cx="${cx}" cy="${FL - 1}" rx="13" ry="2" fill="rgba(0,0,0,.12)"/><path d="M${cx - 9} ${FL}L${cx - 4} ${sy + 6}M${cx + 9} ${FL}L${cx + 4} ${sy + 6}M${cx - 7} ${FL - 22}h14" stroke="#2c2b29" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="${cx - 13}" y="${sy}" width="26" height="7" rx="3.5" fill="#8b7d6b"/><rect x="${cx - 12}" y="${sy - 16}" width="24" height="15" rx="4" fill="#9a8b77" opacity=".9"/></g>`; }
+      g += `<text x="${W / 2}" y="${top + 26}" text-anchor="middle" font-size="7" fill="${xr(wm)}" opacity=".6" font-family="system-ui">30 cm Überstand</text>`;
+    } else if (kh === 'regal') {
+      g += `<rect x="0" y="${top + 4}" width="${W}" height="${FL - 10 - top - 4}" fill="${shade(wm, -.05)}"/><rect x="0" y="${FL - 10}" width="${W}" height="10" fill="#2b2b2b"/>`;
+      const n = Math.max(2, Math.round(W / 60)), mw = W / n, rows = [top + 4, top + 4 + (FL - 14 - top) / 2, FL - 10];
+      for (let i = 1; i < n; i++) g += `<rect x="${i * mw - 1}" y="${top + 4}" width="2" height="${FL - 14 - top}" fill="${wm}"/>`;
+      rows.forEach(y => g += `<rect x="0" y="${y - 1.5}" width="${W}" height="3" fill="${wm}"/>`);
+      const items = (x, y, k) => k % 3 === 0 ? [0, 1, 2, 3].map(j => `<rect x="${x + 8 + j * 6}" y="${y - 24 + (j % 2) * 3}" width="5" height="${24 - (j % 2) * 3}" fill="${['#7d5a43', '#a8724f', '#55616d', '#c9b98f'][j]}"/>`).join('') : k % 3 === 1 ? `<path d="M${x + 10} ${y}h22l-3 -16h-16z" fill="#c9a874"/><path d="M${x + 13} ${y - 10}h16" stroke="#a88a5b"/>` : `<rect x="${x + 14}" y="${y - 12}" width="10" height="12" rx="2" fill="#efe9df"/><circle cx="${x + 19}" cy="${y - 18}" r="7" fill="#6f8f4e"/><circle cx="${x + 25}" cy="${y - 22}" r="5" fill="#7fa05c"/>`;
+      for (let i = 0; i < n; i++) for (let r = 0; r < 2; r++) g += `<g class="kp-ih-it" style="--d:${.1 + (i * 2 + r) * .08}s">${items(i * mw + (mw - 40) / 2, rows[r + 1] - 1.5, i + r * 2)}</g>`;
+    } else {
+      g += `<rect x="0" y="${top + 4}" width="${W}" height="${FL - top - 4}" fill="${wm}" stroke="${sh}" stroke-width=".5"/><rect class="kp-ih-sh" style="--sw:${W + 120}px" x="-60" y="${top + 4}" width="50" height="${FL - top - 4}" fill="url(#kpihg)"/>`;
+    }
+    g += `<rect x="-2" y="${top}" width="${W + 4}" height="4" fill="${topCol()}"/>`;
+    return `<svg class="kp-isl-sv kp-ih kp-ih-${kh}" viewBox="-6 ${y0} ${W + 12} ${104 + dh}" preserveAspectRatio="xMidYMax meet" aria-label="Insel Raumseite: ${(IKH2.find(x => x[0] === kh) || ['', ''])[1]}"><defs><linearGradient id="kpihg" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>${g}</svg>`;
+  }
   function islEditor() {
     if (!islSel) return ''; const [side, id] = islSel.split(':'), mods = islMods(side), i = mods.findIndex(m => String(m.id) === id); if (i < 0) return ''; const m = mods[i], ws = M[m.t].ws;
     const free = isl().w - mods.reduce((a, q) => a + q.w, 0);
@@ -792,7 +818,9 @@
     let h = `<div class="kp-isl-side2"><div class="kp-isl-sh"><b>${side === 'v' ? 'Kochseite' : 'Raumseite'}</b><small>${side === 'v' ? 'zur Küchenzeile – hier stehen Sie beim Kochen' : 'zum Raum'}</small></div>`;
     if (side === 'h') h += `<div class="kp-seg">${IKH2.map(([k, n]) => `<button type="button" data-iskh="${k}" class="${kh === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
     if (side === 'v' || kh === 'schrank') h += islStrip(side) + `<div class="kp-isl-add"><button type="button" data-isadd="${side}"${free < 30 ? ' disabled' : ''}>＋ Schrank</button><small>Antippen zum Ändern – Art, Breite, Reihenfolge</small></div>`;
-    else h += `<p class="kp-isl-h">${({ sitz: '30 cm Überstand – Platz für Barhocker.', regal: 'Offene Fächer zum Raum – für Kochbücher, Körbe und Schönes.', wand: 'Durchgehende, glatte Rückwand in Front- oder Holzoptik.' })[kh]}</p>`;
+    else h += islHView(kh) + `<p class="kp-isl-h">${({ sitz: '30 cm Überstand – Platz für Barhocker.', regal: 'Offene Fächer zum Raum – für Kochbücher, Körbe und Schönes.', wand: 'Durchgehende, glatte Rückwand.' })[kh]}</p>`;
+    if (side === 'h' && (kh === 'schrank' || kh === 'regal')) { const cb = islDepth().cb; h += chipRow(kh === 'regal' ? 'Regal-Tiefe' : 'Tiefe zum Raum', 'iscb', ICB.map(v => [v, v + ' cm' + (v === 40 && kh === 'schrank' ? ' · üblich' : '')]), cb, 'iscb') + `<p class="kp-isl-h">Schränke zum Raum sind meist tiefengekürzt – die Insel wird dabei ${cb + 60 > isl().d ? 'tiefer' : 'passend'}: Kochseite 60 cm + Raumseite ${cb} cm.</p>`; }
+    if (side === 'h' && (kh === 'sitz' || kh === 'wand')) { const dk = P.style.wgDek || 'top'; h += chipRow('Optik', 'iswd', [['top', 'Wie Arbeitsplatte'], ['front', 'Wie Fronten']], dk, 'iswd'); }
     if (islSel && islSel[0] === side) h += islEditor();
     return h + '</div>';
   }
@@ -813,8 +841,11 @@
     if (v) { P.island.v = v.dataset.isv; change(); }
     const kh = e.target.closest('[data-iskh]'), sm = e.target.closest('[data-ism]'), ed = e.target.closest('[data-isme]'), ad = e.target.closest('[data-isadd]');
     if (kh) { const I = P.island; I.kh = kh.dataset.iskh; if ((I.kh === 'schrank' || I.kh === 'regal') && (I.d || 100) < 100) I.d = 100; if (I.kh === 'sitz' && (I.d || 100) < 90) I.d = 90; if (islSel && islSel[0] === 'h') islSel = null; change(); return; }
+    const cbb = e.target.closest('[data-iscb]'), wdb = e.target.closest('[data-iswd]');
+    if (cbb) { const v = +cbb.dataset.v, I = P.island; I.cb = v; I.d = Math.max(80, Math.min(130, 60 + v)); change(); return; }
+    if (wdb) { P.style.wgDek = wdb.dataset.v; change(); return; }
     if (sm) { islSel = islSel === sm.dataset.ism ? null : sm.dataset.ism; renderWalls(); return; }
-    if (ad) { const side = ad.dataset.isadd, mods = islMods(side), free = isl().w - mods.reduce((a, q) => a + q.w, 0), w = [60, 50, 45, 40, 30].find(v => v <= free); if (w) { const m = { id: iuid++, t: 'us', w }; mods.push(m); islSel = side + ':' + m.id; change(); } return; }
+    if (ad) { const side = ad.dataset.isadd, mods = islMods(side), free = isl().w - mods.reduce((a, q) => a + q.w, 0), w = [60, 50, 45, 40, 30].find(v => v <= free); if (w) { const m = { id: iuid++, t: side === 'h' ? 'u1' : 'us', w }; mods.push(m); islSel = side + ':' + m.id; change(); } return; }
     if (ed && islSel) { const [side, id] = islSel.split(':'), mods = islMods(side), i = mods.findIndex(m => String(m.id) === id); if (i < 0) return; const m = mods[i], k = ed.dataset.isme, free = isl().w - mods.reduce((a, q) => a + q.w, 0);
       if (k === 'ist') { m.t = ed.dataset.v; if (!M[m.t].ws.includes(m.w)) m.w = M[m.t].ws.filter(v => v <= m.w + free).pop() || M[m.t].ws[0]; }
       if (k === 'w-' || k === 'w+') { const nw = stepW(M[m.t].ws, m.w, k === 'w+' ? 1 : -1); if (nw - m.w <= free) m.w = nw; }
@@ -1103,8 +1134,13 @@
     h += `<div class="kp-pb">${canL || canR ? `<button type="button" data-p="l"${canL ? '' : ' disabled'} aria-label="nach links">←</button><button type="button" data-p="r"${canR ? '' : ' disabled'} aria-label="nach rechts">→</button>` : ''}${openable(m) && K ? `<button type="button" data-p="o" class="kp-ob">${isO ? 'In 3D schließen' : 'In 3D öffnen'}</button>` : ''}<button type="button" data-p="del" class="kp-del">Entfernen</button></div>`;
     pop.innerHTML = h; pop.hidden = false;
     const g = $(`[data-${up ? 'u' : 'm'}="${m.id}"]`, wallsEl); if (!g || !g.getBoundingClientRect().width) { pop.hidden = true; return; } const r = g.getBoundingClientRect(); if (offView(r)) { pop.hidden = true; return; }
+    // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
+    const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
+    pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
     const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
-    let top = r.top - ph - 10; if (top < 70) top = Math.min(innerHeight - ph - 8, r.bottom + 10); pop.style.left = left + 'px'; pop.style.top = Math.max(64, top) + 'px';
+    let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
+    if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
+    pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
   }
   const offView = r => r.bottom < 60 || r.top > innerHeight - 8;
   const chipRow = (lab, key, list, cur, attr = 'c') => `<div class="kp-prow"><span class="kp-pl">${lab}</span><div class="kp-chips" role="group" aria-label="${lab}">${list.map(([v, n]) => `<button type="button" data-${attr}="${key}" data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}" aria-pressed="${String(cur) === String(v)}">${n}</button>`).join('')}</div></div>`;
@@ -1136,8 +1172,13 @@
     pop.innerHTML = h; pop.hidden = false;
     const cands = [$(`[data-cx="${c.id}"]`, wallsEl), $(`[data-cxp="${c.id}"]`)].filter(el => el && el.getBoundingClientRect().width > 0);
     const r = cands.length ? cands[0].getBoundingClientRect() : null; if (!r || offView(r)) { pop.hidden = true; return; }
+    // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
+    const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
+    pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
     const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
-    let top = r.top - ph - 10; if (top < 70) top = Math.min(innerHeight - ph - 8, r.bottom + 10); pop.style.left = left + 'px'; pop.style.top = Math.max(64, top) + 'px';
+    let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
+    if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
+    pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
   }
   // Gerät (Spüle samt Spülmaschine daneben, bzw. Kochfeld) so nah wie möglich an einen Anschluss rücken – nur wenn dabei kein neuer Konflikt entsteht
   function moveApp(kinds, c) {
@@ -1215,8 +1256,13 @@
     pop.innerHTML = h; pop.hidden = false;
     const cands = [$(`[data-pop="${o.id}"]`), $(`[data-op="${o.id}"]`, wallsEl)].filter(el => el && el.getBoundingClientRect().width > 0);
     const r = cands.length ? cands[0].getBoundingClientRect() : null; if (!r || offView(r)) { pop.hidden = true; return; }
+    // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
+    const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
+    pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
     const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
-    let top = r.top - ph - 10; if (top < 70) top = Math.min(innerHeight - ph - 8, r.bottom + 10); pop.style.left = left + 'px'; pop.style.top = Math.max(64, top) + 'px';
+    let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
+    if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
+    pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
   }
   /* ---------------- Ausstattung: kleine Auswahl mit Mini-Vorschau ---------------- */
   let eqSel = null; // {k: 'sp'|'kf'|'dh'|'bs'|'isl', id?, wall?, rx/ry (Tipp-Punkt in 3D) oder q (Element in der Wandansicht)}
@@ -1271,8 +1317,13 @@
     pop.hidden = false; pop.classList.add('kp-pop-eq');
     let r; if (q.rx != null) { const hr = host3.getBoundingClientRect(); const x = hr.left + q.rx, y = hr.top + q.ry; r = { left: x, right: x, top: y - 8, bottom: y + 8, width: 0 }; } else { const el = q.q && $(q.q, wallsEl); if (!el || !el.getBoundingClientRect().width) { pop.hidden = true; return; } r = el.getBoundingClientRect(); }
     if (offView(r)) { pop.hidden = true; return; }
+    // Handy mit mitlaufender 3D-Ansicht oben: Karte nie über die 3D-Ansicht legen, sondern als Blatt darunter
+    const dk = innerWidth < 1000 && $('.kp-stage.kp-docked'), minT = dk ? Math.round(dk.getBoundingClientRect().bottom + (dk.classList.contains('kp-dkmini') ? 34 : 24)) : 64;
+    pop.style.maxHeight = dk ? Math.max(160, innerHeight - minT - 8) + 'px' : '';
     const pw = pop.offsetWidth, ph = pop.offsetHeight; let left = r.left + r.width / 2 - pw / 2; left = Math.max(8, Math.min(innerWidth - pw - 8, left));
-    let top = r.top - ph - 10; if (top < 70) top = Math.min(innerHeight - ph - 8, r.bottom + 10); pop.style.left = left + 'px'; pop.style.top = Math.max(64, top) + 'px';
+    let top = r.top - ph - 10; if (top < Math.max(70, minT)) top = Math.min(innerHeight - ph - 8, r.bottom + 10);
+    if (dk && (top < minT || top + ph > innerHeight - 8)) top = Math.max(minT, innerHeight - ph - 8);
+    pop.style.left = left + 'px'; pop.style.top = Math.max(minT, top) + 'px';
   }
   function openEq(o) { eqSel = o; sel = null; selOp = null; selCx = null; renderWalls(); }
   const motifIn = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true }); document.body.appendChild(motifIn);
@@ -1691,6 +1742,7 @@
   const unb64 = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
   let lastHash = '';
   function change(noHist) {
+    { const sd = document.querySelector('.kp-stage.kp-docked'); if (sd) { sd.classList.remove('kp-pulse'); void sd.offsetWidth; sd.classList.add('kp-pulse'); } }
     const dropped = normCorners(); if (dropped.length) toast('Eckschränke passen nur in die Ecken einer L- oder U-Küche.');
     const filled = fillCorners(); if (filled.length && !dropped.length) toast('Die Ecke bleibt nicht offen: Blindeckschrank eingesetzt – in „Ecke“ können Sie Karussell oder Le-Mans wählen.');
     const goneUp = followHoods(); linkHoods(); try { autoHinges(); } catch (e) { } if (goneUp) toast(`Die Haube ist mit dem Kochfeld mitgewandert – ${goneUp > 1 ? goneUp + ' Hängeschränke hatten' : 'ein Hängeschrank hatte'} daneben keinen Platz mehr.`, undo);
@@ -1922,7 +1974,7 @@
       form: P.form, formName: FORMS[P.form].n, raum: { breite: W, tiefe: D, hoehe: H },
       arbeitshoehe: ah, sockel: 10 + ah - 90, arbeitsplatte: 4, waende, oeffnungen: P.op.map(opOf),
       anschluesse: (P.cx || []).map(c => ({ typ: c.t, name: CXN[c.t], wand: c.wall, abWand: c.s, hoehe: Math.round(cxH(c)), bestand: !c.neu, neu: !!c.neu, ...(c.t === 'dose' ? { fach: cxN(c), lage: cxO(c) === 'v' ? 'senkrecht' : 'waagerecht', bereich: cxZone(c) } : {}), ...(c.t === 'abluft' ? { durchmesser: cxD(c), bereich: cxZone(c) } : {}), ...(c.t === 'heiz' ? { breite: hzW(c), koerperHoehe: hzH(c), bodenabstand: hzY(c) } : {}) })),
-      insel: P.form === 'insel' ? (() => { const g = isl(); return { breite: g.w, tiefe: g.d, hoehe: 90, variante: P.island.v, mitteX: g.x, mitteZ: g.z, durchgang: g.g, kochseite: islSide().kv, raumseite: islKh(), aufbau: islSideTxt(), schraenkeKochseite: islMods('v').map(m => ({ typ: m.t, name: M[m.t].v || M[m.t].n, breite: m.w })), schraenkeRaumseite: islMods('h').map(m => ({ typ: m.t, name: M[m.t].v || M[m.t].n, breite: m.w })) }; })() : null,
+      insel: P.form === 'insel' ? (() => { const g = isl(); return { breite: g.w, tiefe: g.d, hoehe: 90, variante: P.island.v, mitteX: g.x, mitteZ: g.z, durchgang: g.g, kochseite: islSide().kv, raumseite: islKh(), tiefeKochseite: islDepth().cf, tiefeRaumseite: islDepth().cb, aufbau: islSideTxt(), schraenkeKochseite: islMods('v').map(m => ({ typ: m.t, name: M[m.t].v || M[m.t].n, breite: m.w })), schraenkeRaumseite: islMods('h').map(m => ({ typ: m.t, name: M[m.t].v || M[m.t].n, breite: m.w })) }; })() : null,
       stil: { ...P.style, ausgangsstil: LK ? LK[1] : null, front: frontName(P.style), farbwelt: (WORLDS.find(w => w.k === worldOf(P.style)) || { n: 'Wunschfarbe' }).n, frontHex: P.style.wood ? null : P.style.front, studioHinweisFront: herstHint(P.style) || null, griffe: (HANDLES.find(h => h[0] === P.style.handle) || ['', ''])[1], arbeitsplatteName: (TOPS.find(t => t[0] === P.style.top) || ['', ''])[1] },
       ausstattung: eqData(),
       zusammenfassung: summary(),
@@ -2190,32 +2242,37 @@
      Die Bühne dockt beim Runterscrollen verkleinert unter den Planer-Kopf. Griff: ziehen = Größe, tippen = einklappen. */
   (function () {
     const st = $('.kp-stage'), hd = $('.kp-head'); if (!st || !hd || !window.matchMedia) return;
-    const mq = matchMedia('(max-width:999px)'), H = document.documentElement;
+    const mq = matchMedia('(max-width:999px)'), H = document.documentElement; let big = false;
+    try { big = localStorage.getItem('kp-pip-big') === '1'; } catch (e) { }
     const ph = document.createElement('div'); ph.className = 'kp-stph'; ph.setAttribute('aria-hidden', 'true'); st.parentNode.insertBefore(ph, st);
     const bar = document.createElement('div'); bar.className = 'kp-dock';
-    bar.innerHTML = `<button type="button" data-dk-ov>Übersicht</button><button type="button" class="kp-dock-g" data-dk-grip aria-label="3D-Ansicht: ziehen für größer oder kleiner, tippen zum Ein- und Ausklappen"><i></i><span>3D zeigen</span></button><button type="button" data-dk-up aria-label="Zur großen 3D-Ansicht"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 3h5v5M8 17H3v-5M17 3l-6 6M3 17l6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+    bar.innerHTML = `<button type="button" data-dk-ov>Übersicht</button><button type="button" class="kp-dock-g" data-dk-grip aria-label="3D-Ansicht: ziehen für größer oder kleiner, tippen zum Ein- und Ausklappen"><i></i><span>3D zeigen</span></button><button type="button" class="kp-dock-sz" data-dk-sz aria-label="3D-Fenster größer oder kleiner"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9.5" y="9" width="6" height="4.5" rx="1" fill="currentColor"/></svg></button><button type="button" data-dk-up aria-label="Zur großen 3D-Ansicht"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 3h5v5M8 17H3v-5M17 3l-6 6M3 17l6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
     st.appendChild(bar);
     let on = false, mini = false, hh = 0, raf = 0, drag = null; const LS = 'kp-dock-h';
     try { hh = +localStorage.getItem(LS) || 0; } catch (e) { }
     const blocked = () => ['kpr-on', 'kpf-on', 'kpr-vfon', 'kp-lv-on'].some(c => H.classList.contains(c)) || !!document.fullscreenElement;
     const defH = () => Math.round(Math.min(250, Math.max(150, innerHeight * .26)));
-    function apply() { const top = Math.round(hd.getBoundingClientRect().bottom); root.style.setProperty('--dkt', top + 'px'); root.style.setProperty('--dkh', (mini ? 0 : (hh || defH())) + 'px'); st.classList.toggle('kp-dkmini', mini); }
+    function apply() { st.classList.toggle('kp-pipbig', big); const top = Math.round(hd.getBoundingClientRect().bottom); root.style.setProperty('--dkt', top + 'px'); root.style.setProperty('--dkh', (mini ? 0 : (hh || defH())) + 'px'); st.classList.toggle('kp-dkmini', mini); }
     function set(v) { if (v === on) return; on = v; if (v) ph.style.height = st.offsetHeight + 'px'; st.classList.toggle('kp-docked', v); ph.classList.toggle('on', v); root.classList.toggle('kp-dockon', v); if (v) apply(); }
     function upd() {
-      raf = 0; if (!mq.matches || blocked()) { set(false); return; }
+      raf = 0; if (blocked()) { set(false); return; }
       const ref = (on ? ph : st).getBoundingClientRect(), top = hd.getBoundingClientRect().bottom, end = root.getBoundingClientRect().bottom;
-      set(ref.bottom < top + ref.height * .45 && end > top + 320); if (on) apply();
+      // Handy: dockt unter den Kopf · PC: schwebt als Mini-3D unten rechts, sobald die große Ansicht aus dem Bild ist
+      if (mq.matches) set(ref.bottom < top + ref.height * .45 && end > top + 320);
+      else set(ref.bottom < top + ref.height * .5 && end > innerHeight * .6);
+      if (on) apply();
     }
     const q = () => { if (!raf) raf = requestAnimationFrame(upd); };
     addEventListener('scroll', q, { passive: true }); addEventListener('resize', q); new MutationObserver(q).observe(H, { attributes: true, attributeFilter: ['class'] });
     bar.addEventListener('click', e => {
       if (e.target.closest('[data-dk-ov]')) { if (K && K.view) { K.view('perspektive'); $$('[data-cam]').forEach(x => x.classList.toggle('on', x.dataset.cam === 'perspektive')); } return; }
       if (e.target.closest('[data-dk-up]')) { const y = ph.getBoundingClientRect().top + scrollY - hd.getBoundingClientRect().bottom; scrollTo({ top: Math.max(0, y), behavior: RMO ? 'auto' : 'smooth' }); return; }
+      if (e.target.closest('[data-dk-sz]')) { big = !big; try { localStorage.setItem('kp-pip-big', big ? '1' : '0'); } catch (er) { } mini = false; apply(); return; }
       if (e.target.closest('[data-dk-grip]') && e.detail === 0) { mini = !mini; apply(); }   // Tastatur
     });
     const grip = $('[data-dk-grip]', bar);
     grip.addEventListener('pointerdown', e => { drag = { y: e.clientY, h: mini ? 0 : (hh || defH()), m: 0 }; try { grip.setPointerCapture(e.pointerId); } catch (er) { } });
-    grip.addEventListener('pointermove', e => { if (!drag) return; const d = e.clientY - drag.y; if (Math.abs(d) > 5) drag.m = 1; if (!drag.m) return; const v = Math.max(0, Math.min(innerHeight * .55, drag.h + d)); st.classList.add('kp-dkdrag'); root.style.setProperty('--dkh', v + 'px'); st.classList.toggle('kp-dkmini', v < 60); drag.v = v; });
+    grip.addEventListener('pointermove', e => { if (!drag || !mq.matches) return; const d = e.clientY - drag.y; if (Math.abs(d) > 5) drag.m = 1; if (!drag.m) return; const v = Math.max(0, Math.min(innerHeight * .55, drag.h + d)); st.classList.add('kp-dkdrag'); root.style.setProperty('--dkh', v + 'px'); st.classList.toggle('kp-dkmini', v < 60); drag.v = v; });
     const endDrag = () => { if (!drag) return; const w = drag; drag = null; st.classList.remove('kp-dkdrag'); if (!w.m) mini = !mini; else if (w.v < 70) mini = true; else { mini = false; hh = Math.round(Math.max(110, w.v)); try { localStorage.setItem(LS, String(hh)); } catch (e) { } } apply(); };
     grip.addEventListener('pointerup', endDrag); grip.addEventListener('pointercancel', endDrag);
     upd();

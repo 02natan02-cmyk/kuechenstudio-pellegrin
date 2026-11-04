@@ -811,3 +811,36 @@ html.kp-lv-on{overflow:hidden}
 @media (max-width:1000px){.kp-isl-two{grid-template-columns:1fr}.kp-isl-top .kp-isl-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:999px){.kp-walls .kp-isl{display:none}.kp-walls .kp-isl.on{display:grid}}
 .kp-isl-top .kp-isl-s{grid-template-columns:32px 1fr 32px!important;row-gap:2px}.kp-isl-top .kp-isl-s small{grid-column:1/-1}
+
+/* ---- Mitlauf-3D am PC: Mini-Fenster unten rechts (04.11.) ---- */
+@media (min-width:1000px){
+  .kp-stage.kp-docked{position:fixed;right:22px;bottom:22px;z-index:40;width:clamp(300px,26vw,430px);height:auto;aspect-ratio:16/10.5;border:0;border-radius:18px;box-shadow:0 30px 60px -22px rgba(0,0,0,.6),0 0 0 1px rgba(0,0,0,.08);animation:kpPipIn .38s cubic-bezier(.2,.8,.2,1);transition:width .35s cubic-bezier(.2,.8,.2,1)}
+  .kp-stage.kp-docked.kp-pipbig{width:clamp(420px,40vw,680px)}
+  .kp-stage.kp-docked .kp-3d{overflow:hidden;border-radius:18px}
+  .kp-stage.kp-docked .kp-cams,.kp-stage.kp-docked .kp-acts,.kp-stage.kp-docked .pl-wm,.kp-stage.kp-docked .kpai-done{display:none}
+  .kp-stage.kp-docked .kp-live{top:10px;left:10px;transform:scale(.86);transform-origin:0 0}
+  .kp-stage.kp-docked .kp-dock{position:absolute;right:10px;bottom:10px;left:auto;transform:none;z-index:5;display:flex;align-items:center;gap:3px;padding:3px;border-radius:999px;background:rgba(28,26,23,.86);box-shadow:0 8px 20px -8px rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+  .kp-stage.kp-docked .kp-dock button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:34px;height:32px;padding:0 11px;border:0;border-radius:999px;background:none;color:#fff;font:600 12.5px var(--sans);cursor:pointer}
+  .kp-stage.kp-docked .kp-dock button:hover{background:rgba(255,255,255,.14)}
+  .kp-stage.kp-docked .kp-dock svg{width:16px;height:16px}
+  .kp-stage.kp-docked .kp-dock .kp-dock-g i{display:block;width:12px;height:2px;border-radius:2px;background:#fff}
+  .kp-stage.kp-docked .kp-dock .kp-dock-g span{display:none}
+  .kp-stage.kp-docked.kp-dkmini{width:auto;aspect-ratio:auto;height:auto;background:none;box-shadow:none}
+  .kp-stage.kp-docked.kp-dkmini .kp-3d,.kp-stage.kp-docked.kp-dkmini .kp-live{display:none}
+  .kp-stage.kp-docked.kp-dkmini .kp-dock{position:static}
+  .kp-stage.kp-docked.kp-dkmini .kp-dock .kp-dock-g i,.kp-stage.kp-docked.kp-dkmini [data-dk-ov],.kp-stage.kp-docked.kp-dkmini [data-dk-sz]{display:none}
+  .kp-stage.kp-docked.kp-dkmini .kp-dock .kp-dock-g span{display:inline}
+}
+@media (max-width:999px){.kp-dock .kp-dock-sz{display:none}}
+@keyframes kpPipIn{from{opacity:0;transform:translateY(24px) scale(.94)}}
+@media (prefers-reduced-motion:reduce){.kp-stage.kp-docked{animation:none!important;transition:none!important}}
+.kp-stage.kp-docked.kp-pulse::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:0 0 0 3px var(--copper,#c8794f);animation:kpPulse 1s ease-out forwards;z-index:6}
+@keyframes kpPulse{to{box-shadow:0 0 0 14px rgba(200,121,79,0);opacity:.0}}
+@media (max-width:999px){.kp-stage.kp-docked.kp-pulse::after{border-radius:0 0 18px 18px}}
+.kp-ih .kp-ih-st{animation:kpIhDrop .7s cubic-bezier(.2,.9,.3,1.25) var(--d) both}
+.kp-ih .kp-ih-it{animation:kpIhPop .5s cubic-bezier(.2,.9,.3,1.3) var(--d) both;transform-box:fill-box;transform-origin:50% 100%}
+.kp-ih .kp-ih-sh{animation:kpIhSweep 3.6s ease-in-out .3s infinite}
+@keyframes kpIhDrop{from{transform:translateY(-26px);opacity:0}}
+@keyframes kpIhPop{from{transform:scale(.2);opacity:0}}
+@keyframes kpIhSweep{0%{transform:translateX(0)}60%,100%{transform:translateX(var(--sw,400px))}}
+@media (prefers-reduced-motion:reduce){.kp-ih *{animation:none!important}}
