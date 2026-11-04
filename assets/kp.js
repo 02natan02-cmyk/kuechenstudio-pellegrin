@@ -733,8 +733,9 @@
   const VB0 = 18;
   function renderWalls() {
     const walls = FORMS[P.form].walls;
-    if (!walls.includes(curWall)) curWall = walls.includes('N') ? 'N' : walls[0];
-    tabsEl.innerHTML = walls.length > 1 ? walls.map(w => `<button type="button" data-wt="${w}" class="${w === curWall ? 'on' : ''}">${WN[w]}${free(w) < -0.5 || upList(w).some(u => upConflict(w, u)) ? ' <i>!</i>' : ''}</button>`).join('') : '';
+    if (!walls.includes(curWall) && !(curWall === 'I' && P.form === 'insel')) curWall = walls.includes('N') ? 'N' : walls[0];
+    if (curWall === 'I' && P.form !== 'insel') curWall = walls[0];
+    tabsEl.innerHTML = walls.length > 1 || P.form === 'insel' ? walls.map(w => `<button type="button" data-wt="${w}" class="${w === curWall ? 'on' : ''}">${WN[w]}${free(w) < -0.5 || upList(w).some(u => upConflict(w, u)) ? ' <i>!</i>' : ''}</button>`).join('') + (P.form === 'insel' ? `<button type="button" data-wt="I" class="${curWall === 'I' ? 'on' : ''}">Insel</button>` : '') : '';
     wallsEl.innerHTML = walls.map(w => { const L = wallLen(w); return `<div class="kp-wall${w === curWall ? ' on' : ''}" data-wall="${w}" style="--L:${L}"><svg viewBox="-4 ${VB0} ${L + 8} ${H - VB0 + 24}" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">${drawWall(w, { sel, ghost: ghostId, selOp, prev })}</svg></div>`; }).join('');
     if (P.form === 'insel') wallsEl.insertAdjacentHTML('beforeend', islandCard());
     renderPlan(); renderPop();
@@ -748,12 +749,56 @@
   }
   const IKV = [['schub', 'Schubladen'], ['tuer', 'Türen'], ['mix', 'Gemischt']];
   const IKH = [['sitz', 'Sitzplatz'], ['schub', 'Schubladen'], ['tuer', 'Türen'], ['mix', 'Gemischt'], ['regal', 'Offenes Regal'], ['wand', 'Glatte Rückwand']];
-  const ITWO = k => k === 'schub' || k === 'tuer' || k === 'mix' || k === 'regal';
+  const ITWO = k => k === 'schub' || k === 'tuer' || k === 'mix' || k === 'regal' || k === 'schrank';
   const IKHT = { sitz: '30 cm Überstand – Platz für Barhocker auf der Raumseite.', schub: 'Zwei Schrankreihen Rücken an Rücken. Ab 100 cm Tiefe, mit 120 cm sind beide Seiten volle 60 cm tief.', tuer: 'Zwei Schrankreihen Rücken an Rücken. Ab 100 cm Tiefe, mit 120 cm sind beide Seiten volle 60 cm tief.', mix: 'Zwei Schrankreihen Rücken an Rücken, Schubladen und Türen im Wechsel.', regal: 'Offene Fächer zum Raum – für Kochbücher, Körbe und Schönes.', wand: 'Eine durchgehende Schrankreihe, zum Raum eine glatte Rückwand in Front- oder Holzoptik.' };
-  const islSide = () => { const I = P.island; return { kv: I.kv || 'schub', kh: I.kh || 'sitz' }; };
-  const islSideTxt = () => { const q = islSide(), a = (IKV.find(x => x[0] === q.kv) || IKV[0])[1], b = (IKH.find(x => x[0] === q.kh) || IKH[0])[1]; return `zur Zeile ${a}, zum Raum ${q.kh === 'sitz' ? 'Sitzplatz mit Überstand' : ITWO(q.kh) && q.kh !== 'regal' ? b + ' (zweite Reihe Rücken an Rücken)' : b}`; };
+  const islSide = () => { const I = P.island; return { kv: I.kv || 'schub', kh: islKh() }; };
+  const islSideTxt = () => { const kh = islKh(), ls = side => islMods(side).map(m => `${M[m.t].v || M[m.t].n} ${m.w} cm`).join(', ') || 'keine Schränke'; return `Kochseite: ${ls('v')} · Raumseite: ${kh === 'schrank' ? ls('h') + ' (Rücken an Rücken)' : (IKH2.find(x => x[0] === kh) || ['', 'Sitzplatz'])[1] + (kh === 'sitz' ? ' mit Überstand' : '')}`; };
+  // Insel-Schränke (seit 04.11. abends): Kochseite I.mv und Raumseite I.mh als eigene Schrankreihen – wählbar, verschiebbar wie an der Wand
+  const ISLT = [['us', '3 Schubladen'], ['s2', '2 Auszüge'], ['s4', '4 Schubladen'], ['ut', 'Schublade + Tür'], ['u1', 'Tür'], ['u2', '2 Türen'], ['ui', 'Innenschubladen'], ['gs', 'Spülmaschine'], ['mt', 'Mülltrenner'], ['ap', 'Apotheker']];
+  const IKH2 = [['sitz', 'Sitzplatz'], ['schrank', 'Schränke'], ['regal', 'Offenes Regal'], ['wand', 'Glatte Rückwand']];
+  const islKh = () => { const k = P.island.kh || 'sitz'; return ['schub', 'tuer', 'mix'].includes(k) ? 'schrank' : k; };
+  const islDepth = () => { const d = isl().d, kh = islKh(); const cf = kh === 'wand' ? d - 3 : (kh === 'schrank' || kh === 'regal') ? (d >= 100 ? 60 : Math.round(d / 2)) : Math.max(40, Math.min(60, d - 25)); return { cf, cb: d - cf }; };
+  let iuid = 1;
+  function islGen(kind, w) {
+    const n = Math.max(1, Math.round(w / 60)), out = []; let left = w;
+    for (let i = 0; i < n; i++) { const rest = n - i, ws = [30, 40, 45, 50, 60, 80, 90, 100, 120], want = left / rest; let best = ws.reduce((a, b) => Math.abs(b - want) < Math.abs(a - want) ? b : a); if (i === n - 1) best = ws.filter(v => v <= left).pop() || 30; best = Math.min(best, left); if (best < 15) break;
+      const t = kind === 'tuer' ? (best >= 60 ? 'u2' : 'u1') : kind === 'mix' ? (i % 2 ? (best >= 60 ? 'u2' : 'u1') : 'us') : 'us'; out.push({ id: iuid++, t, w: best }); left -= best; }
+    return out;
+  }
+  function islMods(side) {
+    const I = P.island, key = side === 'v' ? 'mv' : 'mh', w = isl().w;
+    if (side === 'h' && islKh() !== 'schrank') return [];
+    if (!Array.isArray(I[key]) || !I[key].length) I[key] = islGen(side === 'v' ? (I.kv || 'schub') : (['schub', 'tuer', 'mix'].includes(I.kh) ? I.kh : (I.khT || 'schub')), w);
+    I[key].forEach(m => { if (!m.id) m.id = iuid++; else iuid = Math.max(iuid, m.id + 1); });
+    let sum = I[key].reduce((a, m) => a + m.w, 0); while (sum > w && I[key].length) { const m = I[key][I[key].length - 1], cut = Math.min(m.w - 15, sum - w); if (cut > 0 && m.w - cut >= 15) { m.w -= cut; sum -= cut; } else { sum -= m.w; I[key].pop(); } }
+    return I[key];
+  }
+  let islSel = null;   // 'v:<id>' oder 'h:<id>'
+  function islStrip(side) {
+    const mods = islMods(side), W = isl().w, dh = (P.ah || 90) - 90, y0 = FL - 96 - dh; let x = 0, g = '';
+    mods.forEach(m => { const on = islSel === side + ':' + m.id; g += `<g data-ism="${side}:${m.id}" style="cursor:pointer">${elev(m, x)}${on ? `<rect x="${x + 1}" y="${FL - 91 - dh}" width="${m.w - 2}" height="${90 + dh}" fill="none" stroke="${ACC}" stroke-width="2.4" rx="2"/>` : ''}</g>`; x += m.w; });
+    if (x < W - .5) g += `<rect x="${x}" y="${FL - 90 - dh}" width="${W - x}" height="${80 + dh}" fill="#efe9de" stroke="#cfc6b9" stroke-dasharray="3 3"/><text x="${x + (W - x) / 2}" y="${FL - 45}" text-anchor="middle" font-size="9" fill="#8a7f72">${Math.round(W - x)} cm frei</text>`;
+    g += `<rect x="-2" y="${FL - 94 - dh}" width="${W + 4}" height="4" fill="${topCol()}"/>`;
+    return `<svg class="kp-isl-sv" viewBox="-6 ${y0} ${W + 12} ${104 + dh}" preserveAspectRatio="xMidYMax meet" aria-label="Insel ${side === 'v' ? 'Kochseite' : 'Raumseite'}">${g}</svg>`;
+  }
+  function islEditor() {
+    if (!islSel) return ''; const [side, id] = islSel.split(':'), mods = islMods(side), i = mods.findIndex(m => String(m.id) === id); if (i < 0) return ''; const m = mods[i], ws = M[m.t].ws;
+    const free = isl().w - mods.reduce((a, q) => a + q.w, 0);
+    return `<div class="kp-isl-ed"><b>${M[m.t].n} · ${m.w} cm</b>${chipRow('Art', 'ist', ISLT.filter(([t]) => M[t]), m.t, 'isme')}<div class="kp-isl-edr"><div class="kp-step"><button type="button" data-isme="w-"${stepW(ws, m.w, -1) === m.w ? ' disabled' : ''} aria-label="schmaler">−</button><span>${m.w} cm</span><button type="button" data-isme="w+"${stepW(ws, m.w, 1) === m.w || stepW(ws, m.w, 1) - m.w > free ? ' disabled' : ''} aria-label="breiter">+</button></div><button type="button" data-isme="l"${i === 0 ? ' disabled' : ''} aria-label="nach links">←</button><button type="button" data-isme="r"${i === mods.length - 1 ? ' disabled' : ''} aria-label="nach rechts">→</button>${hasHinge(m) ? `<button type="button" data-isme="a">Tür ${aOf(m) === 'l' ? 'links' : 'rechts'} ⇄</button>` : ''}<button type="button" data-isme="del" class="kp-del">Entfernen</button></div></div>`;
+  }
+  function islSideBlock(side) {
+    const kh = islKh(), mods = side === 'v' || kh === 'schrank' ? islMods(side) : [], free = isl().w - mods.reduce((a, q) => a + q.w, 0);
+    let h = `<div class="kp-isl-side2"><div class="kp-isl-sh"><b>${side === 'v' ? 'Kochseite' : 'Raumseite'}</b><small>${side === 'v' ? 'zur Küchenzeile – hier stehen Sie beim Kochen' : 'zum Raum'}</small></div>`;
+    if (side === 'h') h += `<div class="kp-seg">${IKH2.map(([k, n]) => `<button type="button" data-iskh="${k}" class="${kh === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+    if (side === 'v' || kh === 'schrank') h += islStrip(side) + `<div class="kp-isl-add"><button type="button" data-isadd="${side}"${free < 30 ? ' disabled' : ''}>＋ Schrank</button><small>Antippen zum Ändern – Art, Breite, Reihenfolge</small></div>`;
+    else h += `<p class="kp-isl-h">${({ sitz: '30 cm Überstand – Platz für Barhocker.', regal: 'Offene Fächer zum Raum – für Kochbücher, Körbe und Schönes.', wand: 'Durchgehende, glatte Rückwand in Front- oder Holzoptik.' })[kh]}</p>`;
+    if (islSel && islSel[0] === side) h += islEditor();
+    return h + '</div>';
+  }
   function islandCard() {
-    const I = P.island, g = isl(); return `<div class="kp-isl" data-isl><b>Kochinsel</b><p class="kp-isl-h">Größe und Lage – oder im Grundriss unten mit dem Finger verschieben</p><div class="kp-isl-g">${[["w", "Breite", g.w + " cm"], ["d", "Tiefe", g.d + " cm"], ["g", "Durchgang zur Zeile", g.g + " cm"], ["x", "Seitlich", Math.abs(Math.round(g.x - P.room.w / 2)) < 5 ? "mittig" : Math.abs(Math.round(g.x - P.room.w / 2)) + " cm " + (g.x < P.room.w / 2 ? "links" : "rechts")]].map(([k, n, v]) => `<div class="kp-step kp-isl-s"><small>${n}</small><button type="button" data-isa="${k}" data-d="-1" aria-label="${n} verringern">${k === "x" ? "←" : "−"}</button><span>${v}</span><button type="button" data-isa="${k}" data-d="1" aria-label="${n} erhöhen">${k === "x" ? "→" : "+"}</button></div>`).join("")}</div>${g.g < 100 ? '<p class="kp-isl-w">Tipp: Mit unter 100 cm Durchgang wird es eng, wenn zwei Personen kochen oder Türen und Spülmaschine offen sind.</p>' : ""}${(() => { const q = islSide(); return `<div class="kp-isl-side"><small>Zur Küchenzeile (Kochseite)</small><div class="kp-seg">${IKV.map(([k, n]) => `<button type="button" data-iskv="${k}" class="${q.kv === k ? 'on' : ''}">${n}</button>`).join('')}</div><small>Zum Raum</small><div class="kp-seg">${IKH.map(([k, n]) => `<button type="button" data-iskh="${k}" class="${q.kh === k ? 'on' : ''}">${n}</button>`).join('')}</div><p class="kp-isl-h">${IKHT[q.kh]}</p></div>`; })()}<small class="kp-isl-l">In der Insel</small><div class="kp-seg">${[['kochfeld', 'Mit Kochfeld'], ['spuele', 'Mit Spüle'], ['frei', 'Nur Arbeitsfläche']].map(([k, n]) => `<button type="button" data-isv="${k}" class="${I.v === k ? 'on' : ''}">${n}</button>`).join('')}</div>${I.v === 'kochfeld' ? `<div class="kp-eqs kp-eqs-isl">${IHOODS.map(([v, n, d]) => chip('ihood', v, eqv('ihood', 'mulde') === v, IC.hood(v), n)).join('')}</div>` : ''}</div>`;
+    const I = P.island, g = isl();
+    const steps = [["w", "Breite", g.w + " cm"], ["d", "Tiefe", g.d + " cm"], ["g", "Durchgang", g.g + " cm"], ["x", "Seitlich", Math.abs(Math.round(g.x - P.room.w / 2)) < 5 ? "mittig" : Math.abs(Math.round(g.x - P.room.w / 2)) + " cm " + (g.x < P.room.w / 2 ? "links" : "rechts")]].map(([k, n, v]) => `<div class="kp-step kp-isl-s"><small>${n}</small><button type="button" data-isa="${k}" data-d="-1" aria-label="${n} verringern">${k === "x" ? "←" : "−"}</button><span>${v}</span><button type="button" data-isa="${k}" data-d="1" aria-label="${n} erhöhen">${k === "x" ? "→" : "+"}</button></div>`).join("");
+    return `<div class="kp-isl${curWall === 'I' ? ' on' : ''}" data-isl><div class="kp-isl-top"><div><b>Kochinsel</b><p class="kp-isl-h">Größe und Lage – oder im Grundriss mit dem Finger verschieben</p></div><div class="kp-isl-g">${steps}</div></div>${g.g < 100 ? '<p class="kp-isl-w">Tipp: Mit unter 100 cm Durchgang wird es eng, wenn zwei Personen kochen oder Türen und Spülmaschine offen sind.</p>' : ""}<div class="kp-isl-two">${islSideBlock('v')}${islSideBlock('h')}</div><div class="kp-isl-in"><small class="kp-isl-l">In der Insel</small><div class="kp-seg">${[['kochfeld', 'Mit Kochfeld'], ['spuele', 'Mit Spüle'], ['frei', 'Nur Arbeitsfläche']].map(([k, n]) => `<button type="button" data-isv="${k}" class="${I.v === k ? 'on' : ''}">${n}</button>`).join('')}</div>${I.v === 'kochfeld' ? `<div class="kp-eqs kp-eqs-isl">${IHOODS.map(([v, n, d]) => chip('ihood', v, eqv('ihood', 'mulde') === v, IC.hood(v), n)).join('')}</div>` : ''}</div></div>`;
   }
   tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-wt]'); if (!b) return; curWall = b.dataset.wt; sel = null; renderWalls(); });
   wallsEl.addEventListener('click', e => {
@@ -765,9 +810,18 @@
       if (k === 'x') I.x = Math.round(g.x - P.room.w / 2 + dd * 10);
       const n = isl(); I.x = Math.round(n.x - P.room.w / 2); I.g = n.g; change(); }
     if (v) { P.island.v = v.dataset.isv; change(); }
-    const kv = e.target.closest('[data-iskv]'), kh = e.target.closest('[data-iskh]');
-    if (kv) { P.island.kv = kv.dataset.iskv; change(); }
-    if (kh) { const I = P.island; I.kh = kh.dataset.iskh; if (ITWO(I.kh) && (I.d || 100) < 100) I.d = 100; if (I.kh === 'sitz' && (I.d || 100) < 90) I.d = 90; change(); }
+    const kh = e.target.closest('[data-iskh]'), sm = e.target.closest('[data-ism]'), ed = e.target.closest('[data-isme]'), ad = e.target.closest('[data-isadd]');
+    if (kh) { const I = P.island; I.kh = kh.dataset.iskh; if ((I.kh === 'schrank' || I.kh === 'regal') && (I.d || 100) < 100) I.d = 100; if (I.kh === 'sitz' && (I.d || 100) < 90) I.d = 90; if (islSel && islSel[0] === 'h') islSel = null; change(); return; }
+    if (sm) { islSel = islSel === sm.dataset.ism ? null : sm.dataset.ism; renderWalls(); return; }
+    if (ad) { const side = ad.dataset.isadd, mods = islMods(side), free = isl().w - mods.reduce((a, q) => a + q.w, 0), w = [60, 50, 45, 40, 30].find(v => v <= free); if (w) { const m = { id: iuid++, t: 'us', w }; mods.push(m); islSel = side + ':' + m.id; change(); } return; }
+    if (ed && islSel) { const [side, id] = islSel.split(':'), mods = islMods(side), i = mods.findIndex(m => String(m.id) === id); if (i < 0) return; const m = mods[i], k = ed.dataset.isme, free = isl().w - mods.reduce((a, q) => a + q.w, 0);
+      if (k === 'ist') { m.t = ed.dataset.v; if (!M[m.t].ws.includes(m.w)) m.w = M[m.t].ws.filter(v => v <= m.w + free).pop() || M[m.t].ws[0]; }
+      if (k === 'w-' || k === 'w+') { const nw = stepW(M[m.t].ws, m.w, k === 'w+' ? 1 : -1); if (nw - m.w <= free) m.w = nw; }
+      if (k === 'l' && i > 0) [mods[i - 1], mods[i]] = [mods[i], mods[i - 1]];
+      if (k === 'r' && i < mods.length - 1) [mods[i + 1], mods[i]] = [mods[i], mods[i + 1]];
+      if (k === 'a') m.a = aOf(m) === 'l' ? 'r' : 'l';
+      if (k === 'del') { mods.splice(i, 1); islSel = null; }
+      change(); return; }
   });
 
   /* ---------------- Ziehen & Ablegen ---------------- */
@@ -928,7 +982,8 @@
     const u = { id: uid++, t: pe.t, s: tg.s, w: tg.width }; if (pe.o && pe.o.a) u.a = pe.o.a; if (u.t === 'he' && !u.a) u.a = u.s + u.w / 2 < wallLen(w) / 2 ? 'r' : 'l'; list.push(u); list.sort((a, b) => a.s - b.s); sel = u.id; curWall = w; change(); pulse(u.id, 1);
     if (upConflict(w, u)) toast(upConflict(w, u) === 'win' ? (u.t === 'dh' ? 'Achtung: Die Haube hängt vor einem Fenster oder einer Tür.' : 'Achtung: Der Hängeschrank hängt vor einem Fenster oder einer Tür.') : 'Achtung: Der Hängeschrank stößt an einen Hochschrank.');
   }
-  function addEntry(pe) { const c = M[pe.t]; if (c.corner) return addCorner(pe.t); if (c.h === 'u') return addUp(curWall, pe.t, pe.o); if (pe.t === 'sp') return askSink(() => addTo(curWall, pe.t, pe.o)); addTo(curWall, pe.t, pe.o); }
+  function addEntry(pe) { const c = M[pe.t];
+    if (curWall === 'I') { const ok = ISLT.some(([t]) => t === pe.t), mods = islMods('v'), free = isl().w - mods.reduce((a2, q) => a2 + q.w, 0); if (ok) { const w = [pe.t === 'gs' ? 60 : c.w, 60, 50, 45, 40, 30].find(v => v <= free && c.ws.includes(v)); if (w) { const m = { id: iuid++, t: pe.t, w }; if (pe.o && pe.o.a) m.a = pe.o.a; mods.push(m); islSel = 'v:' + m.id; change(); return; } toast('In der Insel ist kein Platz mehr – erst einen Schrank schmaler machen.'); return; } curWall = FORMS[P.form].walls[0]; } if (c.corner) return addCorner(pe.t); if (c.h === 'u') return addUp(curWall, pe.t, pe.o); if (pe.t === 'sp') return askSink(() => addTo(curWall, pe.t, pe.o)); addTo(curWall, pe.t, pe.o); }
   const sinkCount = () => Object.values(P.rows).reduce((a, r) => a + r.filter(m => m.t === 'sp').length, 0) + (P.form === 'insel' && P.island.v === 'spuele' ? 1 : 0);
   function askSink(go) { if (sinkCount() < 1) return go(); ask('Sie haben schon eine Spüle geplant – trotzdem eine zweite?', 'Ja, zweite Spüle', go); }
   function pulse(id, up) { requestAnimationFrame(() => { const g = $(`[data-${up ? 'u' : 'm'}="${id}"]`, wallsEl); if (g && g.animate) g.animate([{ opacity: .3 }, { opacity: 1 }], { duration: 420 }); }); }
@@ -1550,7 +1605,12 @@
         else { const { bottom, h } = upY(u); items.push({ t: 'cab', id: u.id, label: label(u), kind: 'u', w: u.w, h, y0: bottom, led: upLed(u), ...spec(u), ...pos(w, u.s + u.w / 2, 35) }); }
       });
     }
-    if (P.form === 'insel') { const g = isl(), z = g.z; items.push({ t: 'in', w: g.w, d: g.d, v: P.island.v, kv: islSide().kv, kh: islSide().kh, dekor: P.style.wgDek || 'top', ih: eqv('ihood', 'mulde'), hob: eqv('hobW', 80) - 2, x: g.x, z, r: 0 }); }
+    if (P.form === 'insel') { const g = isl(), q = islDepth(), kh2 = islKh();
+      // Schränke der Kochseite (Fronten zur Zeile, r = 180) und der Raumseite (r = 0) als echte Schränke – anklickbar, öffnen in 3D
+      { let o = 0; islMods('v').forEach(m => { const sp = spec(m); items.push({ t: 'cab', id: 'iv' + m.id, label: label(m) + ' (Insel, Kochseite)', kind: 'b', w: m.w, d: q.cf, ah, ...sp, x: g.x + g.w / 2 - o - m.w / 2, z: g.z - g.d / 2 + q.cf / 2, r: 180 }); o += m.w; }); }
+      if (kh2 === 'schrank') { let o = 0; islMods('h').forEach(m => { const sp = spec(m); items.push({ t: 'cab', id: 'ih' + m.id, label: label(m) + ' (Insel, Raumseite)', kind: 'b', w: m.w, d: q.cb, ah, ...sp, x: g.x - g.w / 2 + o + m.w / 2, z: g.z + g.d / 2 - q.cb / 2, r: 0 }); o += m.w; }); }
+    }
+    if (P.form === 'insel') { const g = isl(), z = g.z; items.push({ t: 'in', mods: 1, cf: islDepth().cf, cb: islDepth().cb, w: g.w, d: g.d, v: P.island.v, kv: islSide().kv, kh: islKh(), dekor: P.style.wgDek || 'top', ih: eqv('ihood', 'mulde'), hob: eqv('hobW', 80) - 2, x: g.x, z, r: 0 }); }
     P.op.forEach(o => { const d = { fl: opFl(o), a: opA(o), k: opK(o), dir: opDir(o) }; open.push(o.t === 'fenster' ? { t: 'fenster', wall: o.wall, s: o.s, w: o.w, y: opY(o), h: opHH(o), ...d } : o.t === 'balkon' ? { t: 'balkon', wall: o.wall, s: o.s, w: o.w, y: 0, h: opHH(o), ...d } : { t: 'tuer', wall: o.wall, s: o.s, w: o.w, ...d }); });
     // Heizkörper (Bestand oder neu) – als flacher Plattenheizkörper an der Wand
     (P.cx || []).filter(c => c.t === 'heiz').forEach(c => items.push({ t: 'hz', wall: c.wall, w: hzW(c), h: hzH(c), y0: hzY(c), ...pos(c.wall, c.s, 10) }));
@@ -1858,7 +1918,7 @@
       form: P.form, formName: FORMS[P.form].n, raum: { breite: W, tiefe: D, hoehe: H },
       arbeitshoehe: ah, sockel: 10 + ah - 90, arbeitsplatte: 4, waende, oeffnungen: P.op.map(opOf),
       anschluesse: (P.cx || []).map(c => ({ typ: c.t, name: CXN[c.t], wand: c.wall, abWand: c.s, hoehe: Math.round(cxH(c)), bestand: !c.neu, neu: !!c.neu, ...(c.t === 'dose' ? { fach: cxN(c), lage: cxO(c) === 'v' ? 'senkrecht' : 'waagerecht', bereich: cxZone(c) } : {}), ...(c.t === 'abluft' ? { durchmesser: cxD(c), bereich: cxZone(c) } : {}), ...(c.t === 'heiz' ? { breite: hzW(c), koerperHoehe: hzH(c), bodenabstand: hzY(c) } : {}) })),
-      insel: P.form === 'insel' ? (() => { const g = isl(); return { breite: g.w, tiefe: g.d, hoehe: 90, variante: P.island.v, mitteX: g.x, mitteZ: g.z, durchgang: g.g, kochseite: islSide().kv, raumseite: islSide().kh, aufbau: islSideTxt() }; })() : null,
+      insel: P.form === 'insel' ? (() => { const g = isl(); return { breite: g.w, tiefe: g.d, hoehe: 90, variante: P.island.v, mitteX: g.x, mitteZ: g.z, durchgang: g.g, kochseite: islSide().kv, raumseite: islKh(), aufbau: islSideTxt(), schraenkeKochseite: islMods('v').map(m => ({ typ: m.t, name: M[m.t].v || M[m.t].n, breite: m.w })), schraenkeRaumseite: islMods('h').map(m => ({ typ: m.t, name: M[m.t].v || M[m.t].n, breite: m.w })) }; })() : null,
       stil: { ...P.style, ausgangsstil: LK ? LK[1] : null, front: frontName(P.style), farbwelt: (WORLDS.find(w => w.k === worldOf(P.style)) || { n: 'Wunschfarbe' }).n, frontHex: P.style.wood ? null : P.style.front, studioHinweisFront: herstHint(P.style) || null, griffe: (HANDLES.find(h => h[0] === P.style.handle) || ['', ''])[1], arbeitsplatteName: (TOPS.find(t => t[0] === P.style.top) || ['', ''])[1] },
       ausstattung: eqData(),
       zusammenfassung: summary(),

@@ -792,3 +792,22 @@ html.kp-lv-on{overflow:hidden}
 .kp-cxhelp{margin-top:4px}.kp-cxhelp>summary{cursor:pointer;font:600 12.5px var(--sans);color:var(--mute);list-style:none}.kp-cxhelp>summary::-webkit-details-marker{display:none}.kp-cxhelp>summary::after{content:" ▾"}.kp-cxhelp[open]>summary::after{content:" ▴"}
 @media (prefers-reduced-motion:reduce){.kp-cxcard::before,.kp-cxcard-ic .w{animation:none}}
 .kp-cxcard{padding:16px 12px 12px}.kp-cxcard .kp-cxadd button{min-width:0;padding:10px 4px;gap:4px;font-size:12.5px;white-space:nowrap}
+/* Insel-Editor als eigene Zeile unter den Wänden (seit 04.11. abends) */
+.kp-walls:has(.kp-isl){flex-wrap:wrap}
+.kp-isl{flex:1 0 100%!important;align-content:start;gap:14px;padding:18px 20px 20px}
+.kp-isl-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px 24px}
+.kp-isl-top .kp-isl-g{grid-template-columns:repeat(4,minmax(150px,1fr));flex:1 1 560px;max-width:720px}
+.kp-isl-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kp-isl-side2{display:grid;gap:10px;align-content:start;padding:14px;border-radius:14px;background:#faf7f2;box-shadow:inset 0 0 0 1px var(--line)}
+.kp-isl-sh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.kp-isl-sh b{font:600 15px var(--serif)}.kp-isl-sh small{font-size:12px;color:var(--mute)}
+.kp-isl-sv{width:100%;height:auto;max-height:190px;display:block;background:#fff;border-radius:10px;box-shadow:0 1px 0 var(--line)}
+.kp-isl-sv [data-ism]:hover>*:first-child{filter:brightness(.97)}
+.kp-isl-add{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.kp-isl-add button{padding:8px 14px;border-radius:999px;border:1.5px dashed var(--copper,#7f7d4c);background:#fff;font:600 12.5px var(--sans);cursor:pointer;color:var(--ink)}.kp-isl-add button:disabled{opacity:.4;cursor:default}.kp-isl-add small{font-size:11.5px;color:var(--mute)}
+.kp-isl-ed{display:grid;gap:8px;padding:12px;border-radius:12px;background:#fff;box-shadow:0 0 0 2px rgba(127,125,76,.35),0 12px 30px -20px rgba(0,0,0,.4);animation:kpIslEd .35s cubic-bezier(.2,1,.3,1)}
+.kp-isl-ed b{font:600 14px var(--sans)}
+.kp-isl-edr{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.kp-isl-edr>button{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;font:600 12.5px var(--sans);cursor:pointer}.kp-isl-edr>button:disabled{opacity:.35}
+@keyframes kpIslEd{from{opacity:0;transform:translateY(6px)}}
+.kp-isl-in{display:grid;gap:8px}
+@media (max-width:1000px){.kp-isl-two{grid-template-columns:1fr}.kp-isl-top .kp-isl-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:999px){.kp-walls .kp-isl{display:none}.kp-walls .kp-isl.on{display:grid}}
+.kp-isl-top .kp-isl-s{grid-template-columns:32px 1fr 32px!important;row-gap:2px}.kp-isl-top .kp-isl-s small{grid-column:1/-1}
