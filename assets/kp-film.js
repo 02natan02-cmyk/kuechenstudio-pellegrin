@@ -1,4 +1,4 @@
-/* Willkommens-Film im Küchenplaner (28.10.): 6 kurze Szenen, ca. 22 s, Überspringen jederzeit.
+/* Willkommens-Film im Küchenplaner (28.10., echte Aufnahmen seit 05.11.): kurze Szenen, Überspringen jederzeit.
    Läuft beim ersten Besuch von selbst, danach über „So geht's“ im Planer-Kopf. Kein Ton, keine Daten. */
 (() => {
   const root = document.querySelector('[data-kp]'); if (!root) return;
@@ -7,6 +7,7 @@
   const ERF = root.dataset.erf || 'mit viel Erfahrung', KEY = 'kp-film';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const CAB = (x, y, w, h, cls, d) => `<rect class="${cls}" x="${x}" y="${y}" width="${w}" height="${h}" rx="2" style="--d:${d}s"/>`;
+  const S_END = `<path class="trail" d="M40 170C110 60 190 200 250 92" pathLength="1"/><g class="plane"><path d="M0 0l26 10l-26 10l6-10z"/></g><g class="studio"><path d="M226 120l28-24l28 24v52h-56z"/><rect x="246" y="146" width="16" height="26"/></g><g class="ok"><circle cx="292" cy="96" r="14"/><path d="M285 96l5 5l9-10"/></g>`;
   const S = [
     { t: 3.4, k: 'Willkommen', h: `Willkommen im Küchenplaner von ${esc(ST)}`, p: 'In vier Schritten zu Ihrer eigenen Küche – ganz ohne Vorkenntnisse.',
       svg: `<g class="iso">${[0, 1, 2, 3].map(i => `<path class="pop" style="--d:${.15 + i * .18}s" d="M${70 + i * 46} ${150 - i * 12}l40 -12v52l-40 12z"/><path class="pop top" style="--d:${.15 + i * .18}s" d="M${70 + i * 46} ${150 - i * 12}l40 -12l22 10l-40 12z"/>`).join('')}<path class="pop hood" style="--d:1s" d="M210 44h40l8 26h-56z"/><rect class="pop hood" style="--d:1s" x="224" y="20" width="12" height="24"/><circle class="spark" cx="268" cy="52" r="5" style="--d:1.3s"/></g>` },
@@ -21,13 +22,34 @@
     { t: 5.2, k: 'Zum Schluss', h: `Anfrage an ${esc(P)}`, p: `${esc(P)} schaut sich Ihre Planung persönlich an – ${esc(ERF)}: Was lässt sich verbessern, welche Möglichkeiten gibt es noch?`,
       svg: `<path class="trail" d="M40 170C110 60 190 200 250 92" pathLength="1"/><g class="plane"><path d="M0 0l26 10l-26 10l6-10z"/></g><g class="studio"><path d="M226 120l28-24l28 24v52h-56z"/><rect x="246" y="146" width="16" height="26"/></g><g class="ok"><circle cx="292" cy="96" r="14"/><path d="M285 96l5 5l9-10"/></g>` },
   ];
+  // Echte Aufnahmen (PC oder Handy, je nach Bildschirm), wenn die Seite sie mitbringt: data-filmclips="img/kpfilm/"
+  const CB = root.dataset.filmclips;
+  if (CB) {
+    const mob = matchMedia('(max-width:760px), (max-aspect-ratio: 4/5)').matches, dev = mob ? 'm' : 'd';
+    const CL = [
+      ['01_form', 'Schritt 1', 'Form wählen', 'Zeile, L, U oder Insel – ein Tipp, und die Grundausstattung steht.'],
+      ['02_masse', 'Schritt 1', 'Maße einstellen', 'Breite und Tiefe am Regler ziehen – die Küche wächst sofort mit.'],
+      ['03_anschluesse', 'Schritt 1', 'Anschlüsse eintragen', 'Wasser und Steckdosen setzen – die Spüle wandert von selbst zum Wasser.'],
+      ['04_fenster', 'Schritt 1', 'Fenster & Türen', 'Fenster verschieben – der Planer achtet darauf, dass nichts davor hängt.'],
+      ['05_schraenke', 'Schritt 2', 'Schränke einrichten', 'Hineinziehen, antippen, Tür oder Klappe wählen – und in 3D öffnen.'],
+      ['06_design', 'Schritt 3', 'Ihr Design', 'Farbwelt, Fronten, Griffe und Arbeitsplatte – jede Farbe ist möglich.'],
+      ['07_rueckwand', 'Schritt 3', 'Eigenes Foto als Rückwand', 'Zwei Klicks: Motiv wählen, Foto hochladen – auf Glas oder Dibond.'],
+      ['08_ansichten', 'Ansehen', 'Von oben, von vorn, am Abend', 'Drehen, zoomen, Licht an – so sieht Ihre Küche wirklich aus.'],
+      ['09_plaene', 'Schritt 4', 'Ihre Pläne', 'Grundriss, Wandansichten und Installationsplan – fertig zum Herunterladen.'],
+      ['10_raumfoto', 'Extra', 'In Ihrem Raum', 'Foto vom Raum hochladen – Ihre geplante Küche steht direkt darin.'],
+      ['11_senden', 'Zum Schluss', `An ${esc(P)} schicken`, 'Name, E-Mail, gern Fotos dazu – ein Klick, und die Planung ist im Studio.'],
+    ];
+    S.length = 0;
+    CL.forEach(([f, k, h, p]) => S.push({ t: 7, k, h, p, clip: `${CB}${dev}/${f}.webm`, poster: `${CB}${dev}/${f}.jpg` }));
+    S.push({ t: 6, k: 'Keine Sorge', h: `Die Feinheiten erledigt ${esc(P)}.`, p: `Ihr Küchenprofi ${esc(P)} schaut sich Ihre Planung persönlich an – ${esc(ERF)} – und macht vor Ort im Studio daraus eine Küche, die passt.`, svg: S_END });
+  }
   const TOT = S.reduce((a, s) => a + s.t, 0);
   let el = null, i = 0, tm = 0, t0 = 0, left = 0, paused = false, last = null;
   function build() {
     el = document.createElement('div'); el.className = 'kpfm'; el.setAttribute('role', 'dialog'); el.tabIndex = -1; el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', `So geht's – der Küchenplaner in ${Math.round(TOT)} Sekunden`);
     el.innerHTML = `<div class="kpfm-bar">${S.map(() => '<i><b></b></i>').join('')}</div>
 <button type="button" class="kpfm-skip" data-fm-skip>Überspringen</button>
-<div class="kpfm-stage">${S.map((s, j) => `<section class="kpfm-s" data-s="${j}" aria-hidden="true"><svg viewBox="0 0 320 230" aria-hidden="true">${s.svg}</svg><p class="kpfm-k">${s.k}</p><h2>${s.h}</h2><p class="kpfm-p">${s.p}</p></section>`).join('')}</div>
+<div class="kpfm-stage">${S.map((s, j) => `<section class="kpfm-s${s.clip ? ' kpfm-v' : ''}" data-s="${j}" aria-hidden="true">${s.clip ? `<div class="kpfm-dev kpfm-${CB && matchMedia('(max-width:760px), (max-aspect-ratio: 4/5)').matches ? 'ph' : 'pc'}"><video muted playsinline preload="${j < 2 ? 'auto' : 'none'}" poster="${s.poster}" data-src="${s.clip}"></video></div>` : `<svg viewBox="0 0 320 230" aria-hidden="true">${s.svg}</svg>`}<p class="kpfm-k">${s.k}</p><h2>${s.h}</h2><p class="kpfm-p">${s.p}</p></section>`).join('')}</div>
 <div class="kpfm-nav"><button type="button" data-fm-prev aria-label="Zurück">‹</button><button type="button" class="kpfm-go" data-fm-go>Weiter</button><button type="button" data-fm-next aria-label="Weiter">›</button></div>`;
     document.body.appendChild(el);
     el.addEventListener('click', e => {
@@ -37,8 +59,8 @@
       if (e.target.closest('.kpfm-stage')) { const r = el.getBoundingClientRect(); return e.clientX < r.width * .3 ? show(Math.max(0, i - 1)) : (i >= S.length - 1 ? close() : show(i + 1)); }
     });
     // gedrückt halten = Pause (wie bei Stories)
-    el.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; paused = true; left = Math.max(0, left - (performance.now() - t0)); clearTimeout(tm); el.classList.add('paused'); });
-    const go = () => { if (!paused) return; paused = false; el.classList.remove('paused'); t0 = performance.now(); tm = setTimeout(() => i >= S.length - 1 ? 0 : show(i + 1), left); };
+    el.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; paused = true; left = Math.max(0, left - (performance.now() - t0)); clearTimeout(tm); el.classList.add('paused'); const v = el.querySelector('.kpfm-s.on video'); if (v) v.pause(); });
+    const go = () => { if (!paused) return; paused = false; el.classList.remove('paused'); const v = el.querySelector('.kpfm-s.on video'); if (v) { v.play().catch(() => { }); return; } t0 = performance.now(); tm = setTimeout(() => i >= S.length - 1 ? 0 : show(i + 1), left); };
     el.addEventListener('pointerup', go); el.addEventListener('pointercancel', go);
     el.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (e.key === 'ArrowRight') show(Math.min(S.length - 1, i + 1)); else if (e.key === 'ArrowLeft') show(Math.max(0, i - 1)); });
   }
@@ -47,6 +69,17 @@
     el.querySelectorAll('.kpfm-s').forEach((s, k) => { s.classList.toggle('on', k === j); s.setAttribute('aria-hidden', k !== j); });
     el.querySelectorAll('.kpfm-bar i').forEach((b, k) => { b.className = k < j ? 'done' : k === j ? 'now' : ''; b.style.setProperty('--t', S[k].t + 's'); });
     const g = el.querySelector('[data-fm-go]'); g.textContent = j >= S.length - 1 ? 'Jetzt loslegen' : 'Weiter'; el.classList.toggle('end', j >= S.length - 1);
+    el.querySelectorAll('.kpfm-s video').forEach((v, k) => { if (k !== j) { try { v.pause(); } catch (e) { } } });
+    const sec = el.querySelector(`.kpfm-s[data-s="${j}"]`), v = sec && sec.querySelector('video');
+    const nx = el.querySelector(`.kpfm-s[data-s="${j + 1}"] video`); if (nx && !nx.src) { nx.src = nx.dataset.src; nx.preload = 'auto'; }
+    if (v) {
+      if (!v.src) v.src = v.dataset.src; v.currentTime = 0;
+      const setT = () => { if (v.duration && isFinite(v.duration)) { S[j].t = v.duration; const b = el.querySelectorAll('.kpfm-bar i')[j]; if (b) { b.style.setProperty('--t', v.duration + 's'); b.className = ''; void b.offsetWidth; b.className = 'now'; } } };
+      if (v.readyState >= 1) setT(); else v.addEventListener('loadedmetadata', setT, { once: true });
+      v.onended = () => { if (el && i === j && !paused) (j < S.length - 1 ? show(j + 1) : 0); };
+      if (!RM) v.play().catch(() => { });
+      return;
+    }
     if (RM) return; left = S[j].t * 1000; t0 = performance.now(); if (j < S.length - 1) tm = setTimeout(() => show(j + 1), left);
   }
   function open() {
