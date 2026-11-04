@@ -268,6 +268,7 @@
   }
   // Passstücke & Wangen (automatisch): Restmaß unter 30 cm am Wandende / zwischen den Ecken → Passstück (Höhe wie der Nachbar);
   // freistehendes Zeilenende (≥ 30 cm frei) → Seitenwange, 2 cm vor der Front
+  const gripEnd = () => P.style.handle === 'grifflos' && P.style.gripEnd === 'leiste';
   function trims(w) {
     const LY = layout(w), rows = P.rows[w] || [], out = { pf: [], wg: [] }; if (!rows.length || LY.fr <= .5) return out;
     const n = rows.length, at0 = LY.gi === 0, nb = LY.inner ? rows[Math.min(n - 1, LY.gi)] : at0 ? rows[0] : rows[n - 1], tall = M[nb.t].h === 't' && !LY.inner;
@@ -660,7 +661,7 @@
     const fr = LY.fr, gx = LY.gx;
     const TR = trims(w), dk = k => (P.style[k] === 'top' ? topCol() : P.style[k] === 'front' ? fcol() : k === 'wgDek' ? topCol() : fcol()), dhh = (P.ah || 90) - 90;
     TR.pf.forEach(q => { s += `<g data-pf="${w}" class="kp-trim">${q.tall ? `<rect x="${q.x}" y="${FL - 10}" width="${q.w}" height="10" fill="#2b2b2b"/>${front(q.x, FL - q.h, q.w, q.h - 10, { noH: 1, fill: dk('pfDek') })}` : `<g transform="translate(0 ${-dhh})"><rect x="${q.x}" y="${FL - 10}" width="${q.w}" height="${10 + dhh}" fill="#2b2b2b"/>${front(q.x, FL - 86, q.w, 76, { noH: 1, fill: dk('pfDek') })}<rect x="${q.x - .3}" y="${FL - 90}" width="${q.w + .6}" height="4" fill="${topCol()}"/></g>`}${q.w >= 9 ? `<text x="${q.x + q.w / 2}" y="${FL - 46 - dhh}" font-size="${Math.min(5.5, q.w / 3)}" text-anchor="middle" fill="${xr(dk('pfDek'))}" font-family="system-ui" transform="rotate(-90 ${q.x + q.w / 2} ${FL - 46 - dhh})">Passstück ${Math.round(q.w)}</text>` : ''}<rect class="kp-hit" x="${q.x}" y="${FL - (q.tall ? q.h : 92 + dhh)}" width="${Math.max(q.w, 6)}" height="${q.tall ? q.h : 92 + dhh}" fill="transparent"/></g>`; });
-    TR.wg.forEach(q => { s += `<g data-wg="${w}" class="kp-trim"><rect x="${q.x}" y="${FL - 90 - dhh}" width="2.5" height="${90 + dhh}" fill="${dk('wgDek')}" stroke="rgba(0,0,0,.3)" stroke-width=".4"/><rect class="kp-hit" x="${q.x - 3}" y="${FL - 92 - dhh}" width="8.5" height="${92 + dhh}" fill="transparent"/></g>`; });
+    TR.wg.forEach(q => { s += `<g data-wg="${w}" class="kp-trim"><rect x="${q.x}" y="${FL - 90 - dhh}" width="2.5" height="${90 + dhh}" fill="${gripEnd() ? fcol() : dk('wgDek')}" stroke="rgba(0,0,0,.3)" stroke-width=".4"/>${gripEnd() ? `<rect x="${q.x}" y="${FL - 85.6 - dhh}" width="2.5" height="1.6" fill="#8b8379"/><rect x="${q.x}" y="${FL - 66.6 - dhh}" width="2.5" height="1.6" fill="#8b8379"/>` : ''}<rect class="kp-hit" x="${q.x - 3}" y="${FL - 92 - dhh}" width="8.5" height="${92 + dhh}" fill="transparent"/></g>`; });
     if (fr >= 30 && !LY.inner) s += `<g class="kp-free">${LY.inner ? `<g transform="translate(0 ${-((P.ah || 90) - 90)})"><rect x="${gx}" y="${FL - 10}" width="${fr}" height="${10 + (P.ah || 90) - 90}" fill="#2b2b2b"/>${front(gx, FL - 86, fr, 76, { noH: 1 })}<rect x="${gx - .3}" y="${FL - 90}" width="${fr + .6}" height="4" fill="${topCol()}"/></g>` : ''}<rect x="${gx + 1}" y="${FL - 89}" width="${fr - 2}" height="88" rx="2" fill="rgba(255,255,255,${LY.inner ? .25 : .4})" stroke="${ACC}" stroke-dasharray="3 2.4" stroke-width=".8"/>${fr >= 28 ? `<text x="${gx + fr / 2}" y="${FL - 42}" font-size="${Math.min(8, fr / 5)}" text-anchor="middle" fill="${ACC}" font-family="system-ui" font-weight="700">${LY.inner ? 'Blende' : 'frei'} ${Math.round(fr)}</text>` : ''}</g>`;
     if (fr < -0.5) s += `<rect x="${b}" y="${FL - 92}" width="${Math.min(-fr, 400)}" height="92" fill="rgba(208,40,40,.25)" stroke="#d02828" stroke-width=".8"/>`;
     { const cf = upCornerFill(w); if (cf) s += `<g pointer-events="none">${front(cf.s, cf.y, cf.w, cf.h, { noH: 1 })}<rect x="${cf.sx}" y="${cf.y}" width="35" height="${cf.h}" fill="${shade(fcol(), -.1)}" stroke="rgba(0,0,0,.18)" stroke-width=".4"/></g>`; }
@@ -1249,6 +1250,7 @@
       if (k === 'isl') h += eqRow('Abzug', IHOODS.map(([v, n, d]) => chip('ihood', v, eqv('ihood', 'mulde') === v, IC.hood(v), n, d)).join(''), blk);
     }
     if (k === 'dh') { h += eqRow('Haube', HOODS.map(([v, n, d]) => chip('hood', v, eqv('hood', 'schraeg') === v, IC.hood(v), n, d)).join(''), blk); if (!blk) h += `<p class="kp-eqhint">Lieber ohne Haube? Beim Kochfeld „Mit Muldenlüfter“ wählen.</p>`; }
+    if (k === 'wg' && P.style.handle === 'grifflos') h += eqRow('Abschluss', chip('gripEnd', 'wange', !gripEnd(), IC.dot(topCol()), 'Wange') + chip('gripEnd', 'leiste', gripEnd(), IC.dot('#8b8379'), 'Griffleiste ums Eck', 'läuft seitlich weiter'), blk);
     if (k === 'pf' || k === 'wg') { const f = k === 'pf' ? 'pfDek' : 'wgDek', cur = P.style[f] || (k === 'pf' ? 'front' : 'top'); h += eqRow('Dekor', chip(f, 'front', cur === 'front', IC.dot(fcol()), 'Frontfarbe') + chip(f, 'top', cur === 'top', IC.dot(topCol()), 'Arbeitsplatte'), blk); if (!blk) h += `<p class="kp-eqhint">${k === 'pf' ? 'Das Passstück schließt das Restmaß automatisch – ohne Lücke zur Wand oder zum Hochschrank.' : 'Die Seitenwange schließt das offene Zeilenende sauber ab und steht 2 cm über die Front.'}</p>`; }
     if (k === 'bs') {
       const b = P.style.back || 'wand';
@@ -1284,7 +1286,7 @@
   function setEq(k, v) {
     if (k === 'close') { eqSel = null; pop.hidden = true; renderWalls(); return; }
     if (k === 'motif') { motifIn.click(); return; }
-    if (k === 'sink' || k === 'tap' || k === 'hood' || k === 'ihood' || k === 'backWood' || k === 'pfDek' || k === 'wgDek') P.style[k] = v;
+    if (k === 'sink' || k === 'tap' || k === 'hood' || k === 'ihood' || k === 'backWood' || k === 'pfDek' || k === 'wgDek' || k === 'gripEnd') P.style[k] = v;
     if (k === 'backC') { if (v) P.style.backC = v; else delete P.style.backC; }
     if (k === 'backLed') P.style.backLed = +v && backLit() ? 1 : 0;
     if (k === 'motivMat') { P.style.motivMat = v; if (!backLit()) P.style.backLed = 0; }
@@ -1299,7 +1301,7 @@
       toast(v === 'dd' ? 'Muldenlüfter gewählt – er saugt direkt am Kochfeld ab, die Haube entfällt.' : 'Normales Kochfeld – die Haube hängt wieder darüber.');
     }
     if (eqSel && eqSel.k === 'dh' && k === 'hobV' && v === 'dd') eqSel = null;
-    if (['back', 'backC', 'backWood', 'backLed', 'sink', 'tap', 'hood', 'pfDek', 'wgDek'].includes(k)) xfade();
+    if (['back', 'backC', 'backWood', 'backLed', 'sink', 'tap', 'hood', 'pfDek', 'wgDek', 'gripEnd'].includes(k)) xfade();
     change();
     const FK = { sink: 'sp', tap: 'sp', hobW: 'kf', hobV: 'kf', hood: 'dh', ihood: 'isl', back: 'bs', backC: 'bs', backWood: 'bs', backLed: 'bs' }; if (FK[k]) follow(FK[k]);
   }
@@ -1596,7 +1598,7 @@
       });
       // freier Platz zwischen zwei Ecken: Passblende mit durchlaufender Arbeitsplatte – keine offene Lücke
       { const TR = trims(w), pd = P.style.pfDek || 'front'; TR.pf.forEach(q => { if (q.w >= .8) items.push({ t: 'cab', kind: q.tall ? 't' : 'b', w: q.w, h: q.tall ? q.h : undefined, ah, fr: [{ k: 'blind', p: 1 }], noGrip: 1, eqk: 'pf', eqw: w, dekor: pd, ...pos(w, q.x + q.w / 2, 60) }); });
-        TR.wg.forEach(q => items.push({ t: 'wg', wall: w, h: 90 + ah - 90, dekor: P.style.wgDek || 'top', ...pos(w, q.x + 1.25, 62) })); }
+        TR.wg.forEach(q => items.push({ t: 'wg', wall: w, h: 90 + ah - 90, dekor: P.style.wgDek || 'top', grip: gripEnd() ? 1 : 0, ...pos(w, q.x + 1.25, 62) })); }
       if (withNs) segs.forEach(([x, sw, h]) => items.push({ t: 'ns', wall: w, w: sw, h, ah, nx: x - nx0, nW: nx1 - nx0, ...pos(w, x + sw / 2, 2) }));
       { const cf = upCornerFill(w); if (cf) items.push({ t: 'cab', kind: 'u', w: cf.w, h: cf.h, y0: cf.bottom, fr: [{ k: 'blind', p: 1 }], led: false, ...pos(w, cf.s + cf.w / 2, 35) }); }
       upList(w).forEach(u => {
@@ -1751,6 +1753,7 @@
   if (ahIn) { ahIn.addEventListener('input', () => { P.ah = +ahIn.value; $('[data-kp-aho]').textContent = P.ah + ' cm'; renderWalls(); schedule3D(); }); ahIn.addEventListener('change', () => change()); }
   function syncRoomOut() { if (ahIn) { ahIn.value = P.ah || 90; $('[data-kp-aho]').textContent = (P.ah || 90) + ' cm'; } $('[data-kp-rwo]').textContent = (P.room.w / 100).toFixed(2).replace('.', ',') + ' m'; $('[data-kp-rdo]').textContent = (P.room.d / 100).toFixed(2).replace('.', ',') + ' m'; }
   const anyTop = () => Object.values(P.top).some(Boolean) || Object.values(P.up || {}).some(l => l.some(u => u.t !== 'dh'));
+  $$('[data-kp-gripend]').forEach(b => b.addEventListener('click', () => { P.style.gripEnd = gripEnd() ? 'wange' : 'leiste'; change(); renderPal(); if (gripEnd()) toast('Die Griffleisten laufen jetzt seitlich ums Eck weiter – statt Wange.'); }));
   $$('[data-kp-gripled]').forEach(b => b.addEventListener('click', () => { P.style.gripLed = P.style.gripLed ? 0 : 1; change(); renderPal(); if (P.style.gripLed) toast('Griffleisten leuchten jetzt – am schönsten im Abendmodus.'); if (P.style.gripLed && !night) { const mb = $('[data-mood]'); mb && mb.click(); } }));
   $$('[data-kp-top]').forEach(b => b.addEventListener('click', () => { const on = !anyTop(); const had = Object.keys(P.up).length; for (const k in P.top) P.top[k] = on ? 1 : 0; P.up = {}; change(); if (had) toast(on ? 'Hängeschränke wieder automatisch über allen Unterschränken.' : 'Alle Hängeschränke entfernt.', undo); }));
   // Stil
@@ -1871,6 +1874,7 @@
     $$('[data-front]').forEach(b => b.classList.toggle('on', s.wood ? b.dataset.front === 'wood:' + s.wood : b.dataset.front === s.front));
     $$('[data-handle]').forEach(b => b.classList.toggle('on', b.dataset.handle === s.handle));
     $$('[data-kp-gripled]').forEach(b => { b.hidden = s.handle !== 'grifflos'; b.classList.toggle('on', !!s.gripLed); b.setAttribute('aria-pressed', !!s.gripLed); });
+    $$('[data-kp-gripend]').forEach(b => { b.hidden = s.handle !== 'grifflos'; const on = s.gripEnd === 'leiste'; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
     $$('[data-top]').forEach(b => b.classList.toggle('on', b.dataset.top === s.top));
     $$('[data-finish]').forEach(b => b.classList.toggle('on', b.dataset.finish === (s.finish || 'matt')));
     $$('[data-fstyle]').forEach(b => b.classList.toggle('on', b.dataset.fstyle === String(s.frame ? 1 : 0)));
@@ -1907,7 +1911,7 @@
       if (!rowsW) return o;
       const [a, b] = range(w), X = xs(w), LY = layout(w);
       o.nutzbarVon = a; o.nutzbarBis = b; o.frei = Math.round(free(w)); if (LY.fr > .5) o.freiAb = Math.round(LY.gx);
-      { const TR = trims(w); o.passstuecke = TR.pf.map(q => ({ name: 'Passstück', abWand: Math.round(q.x), breite: Math.round(q.w), hoehe: q.tall ? q.h : ah, dekor: (P.style.pfDek || 'front') === 'top' ? 'Arbeitsplatte' : 'Frontfarbe' })); o.wangen = TR.wg.map(q => ({ name: 'Seitenwange', seite: q.side, abWand: Math.round(q.x), breite: 2.5, hoehe: ah, tiefe: 62, dekor: (P.style.wgDek || 'top') === 'top' ? 'Arbeitsplatte' : 'Frontfarbe' })); }
+      { const TR = trims(w); o.passstuecke = TR.pf.map(q => ({ name: 'Passstück', abWand: Math.round(q.x), breite: Math.round(q.w), hoehe: q.tall ? q.h : ah, dekor: (P.style.pfDek || 'front') === 'top' ? 'Arbeitsplatte' : 'Frontfarbe' })); o.wangen = TR.wg.map(q => ({ name: gripEnd() ? 'Seitenabschluss in Frontfarbe mit umlaufender Griffleiste (oben und Mitte)' : 'Seitenwange', seite: q.side, abWand: Math.round(q.x), breite: 2.5, hoehe: ah, tiefe: 62, dekor: (P.style.wgDek || 'top') === 'top' ? 'Arbeitsplatte' : 'Frontfarbe' })); }
       o.unten = rowsW.map((m, i) => { const cs = cornerSide(w, i), c = M[m.t], tall = c.h === 't', r = { id: m.id, typ: m.t, name: c.n, variante: variant(m, cs), art: tall ? 'hoch' : 'unter', breite: m.w, hoehe: tall ? hOf(m) : ah, ...(tall && axOf(m) ? { aufsatz: axOf(m), gesamthoehe: hOf(m) + axOf(m) } : {}), tiefe: 60, abWand: X[i], ecke: cs || null, tuerAnschlag: hasHinge(m, cs) ? (aOf(m, cs) === 'l' ? 'links' : 'rechts') : null }; return r; });
       o.oben = [...upList(w)].sort((p, q) => p.s - q.s).map(u => u.t === 'dh' ? { id: u.id, typ: 'dh', name: 'Dunstabzug', variante: nm(HOODS, eqv('hood', 'schraeg')), art: 'haube', breite: u.w, hoehe: 108, tiefe: 50, abWand: Math.round(u.s), unterkante: 152 } : { id: u.id, typ: u.t, name: M[u.t].n, variante: variant(u), art: 'haenge', breite: u.w, hoehe: hOf(u), tiefe: 35, abWand: Math.round(u.s), unterkante: upY(u).bottom, oberkante: upY(u).bottom + hOf(u), tuerAnschlag: hasHinge(u) ? (aOf(u) === 'l' ? 'links' : 'rechts') : null, automatisch: !!u.auto });
       return o;
@@ -1969,7 +1973,7 @@
     const s = P.style, fr = [frontName(s)];
     const L = [`Form: ${FORMS[P.form].n} · Raum ${P.room.w} × ${P.room.d} cm`];
     for (const w in P.rows) {
-      { const TR = trims(w); L.push(`${WN[w]} unten: ` + ([...P.rows[w].map((m, i) => descr(m, cornerSide(w, i))), ...TR.pf.map(q => `Passstück ${Math.round(q.w)} cm ${q.where}${q.tall ? ' (hoch)' : ''}`), ...TR.wg.map(q => `Seitenwange ${q.side} (${(P.style.wgDek || 'top') === 'top' ? 'Arbeitsplattendekor' : 'Frontfarbe'})`)].join(' · ') || '–')); }
+      { const TR = trims(w); L.push(`${WN[w]} unten: ` + ([...P.rows[w].map((m, i) => descr(m, cornerSide(w, i))), ...TR.pf.map(q => `Passstück ${Math.round(q.w)} cm ${q.where}${q.tall ? ' (hoch)' : ''}`), ...TR.wg.map(q => gripEnd() ? `Seitenabschluss ${q.side} mit Griffleiste ums Eck` : `Seitenwange ${q.side} (${(P.style.wgDek || 'top') === 'top' ? 'Arbeitsplattendekor' : 'Frontfarbe'})`)].join(' · ') || '–')); }
       const ups = upList(w); L.push(`${WN[w]} oben${P.up[w] ? '' : ' (automatisch)'}: ` + (ups.length ? [...ups].sort((a, b) => a.s - b.s).map(u => descr(u, null, true)).join(' · ') : 'keine Hängeschränke'));
     }
     if (P.form === 'insel') L.push(`Insel: ${isl().w} × ${isl().d} cm, ${isl().g} cm Durchgang zur Zeile, ${({ kochfeld: 'mit Kochfeld', spuele: 'mit Spüle', frei: 'freie Arbeitsfläche' })[P.island.v]}; ${islSideTxt()}`);
@@ -1977,7 +1981,7 @@
     if (P.op.length) L.push('Fenster & Türen: ' + P.op.map(o => `${OPN[o.t]} ${o.w} cm (${WN[o.wall]}, ab ${o.s} cm; ${opDesc(o)})`).join(' · '));
     const cxL = c => `${CXN[c.t]}${cxSpec(c) ? ' ' + cxSpec(c) : ''} (${WN[c.wall]}, Mitte ${c.s} cm von links${c.t === 'heiz' ? '' : `, ${Math.round(cxH(c))} cm hoch`})`;
     { const ex = (P.cx || []).filter(c => !c.neu), nw = (P.cx || []).filter(c => c.neu); if (ex.length) L.push('Anschlüsse im Raum (Bestand): ' + ex.map(cxL).join(' · ')); if (nw.length) L.push('Anschlüsse neu geplant: ' + nw.map(cxL).join(' · ')); }
-    L.push(`Fronten: ${fr[0]}${WORLDS.some(w => w.k === worldOf(s)) ? ` (Farbwelt „${WORLDS.find(w => w.k === worldOf(s)).n}“)` : ''} · Griffe: ${HANDLES.find(h => h[0] === s.handle)[1]}${s.handle === 'grifflos' && s.gripLed ? ' mit beleuchteter Griffleiste' : ''} · Arbeitsplatte: ${TOPS.find(t => t[0] === s.top)[1]} · Hängeschränke: ${Object.keys(P.up).length ? 'individuell geplant' : anyTop() ? 'automatisch' : 'keine'}`);
+    L.push(`Fronten: ${fr[0]}${WORLDS.some(w => w.k === worldOf(s)) ? ` (Farbwelt „${WORLDS.find(w => w.k === worldOf(s)).n}“)` : ''} · Griffe: ${HANDLES.find(h => h[0] === s.handle)[1]}${s.handle === 'grifflos' && s.gripLed ? ' mit beleuchteter Griffleiste' : ''}${s.handle === 'grifflos' && s.gripEnd === 'leiste' ? ', Griffleisten seitlich ums Eck statt Wange' : ''} · Arbeitsplatte: ${TOPS.find(t => t[0] === s.top)[1]} · Hängeschränke: ${Object.keys(P.up).length ? 'individuell geplant' : anyTop() ? 'automatisch' : 'keine'}`);
     { const hh = herstHint(s); if (hh) L.push('Studio-Hinweis Frontfarbe (Richtwerte, bitte am Originalmuster prüfen): ' + hh); }
     const LK = LOOKS.find(x => x[0] === s.look); if (LK) L.push(`Ausgangsstil: ${LK[1]}`);
     { const q = eqData(), A = []; if (q.spuele) A.push(`Spüle ${q.spuele}`, `Armatur ${q.armatur}`); if (q.kochfeldBreite) A.push(`Kochfeld ${q.kochfeldBreite} cm${q.kochfeldArt === 'mit Muldenlüfter' ? ' mit Muldenlüfter' : ''}`); if (q.dunstabzug && q.kochfeldArt !== 'mit Muldenlüfter') A.push(`Dunstabzug: ${q.dunstabzug}`); if (q.inselAbzug) A.push(`Abzug an der Insel: ${q.inselAbzug}`); if (A.length) L.push('Ausstattung: ' + A.join(' · ')); }
