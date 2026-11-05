@@ -248,3 +248,42 @@ addEventListener('keydown', e => { if (e.key !== 'Escape') return; const b = doc
   const wait = () => { const it = document.querySelector('.intro'); if (it && !it.classList.contains('gone')) return setTimeout(wait, 400); setTimeout(start, 1500); };
   if (document.readyState === 'complete') wait(); else addEventListener('load', wait, { once: true });
 })();
+
+(() => {
+  const f = document.querySelector('[data-pfilm]'); if (!f) return;
+  const v = f.querySelector('video'), go = f.querySelector('[data-pf-go]'), cd = f.querySelector('[data-pf-cd]'), snd = f.querySelector('[data-pf-snd]'), prog = f.querySelector('[data-pf-prog]');
+  const S = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, x) => { try { localStorage.setItem(k, x); } catch (e) { } } };
+  const port = () => innerHeight > innerWidth * 1.05;
+  let started = false, timer = 0, lastFocus = null;
+  function load() { if (v.dataset.on) return; v.dataset.on = 1; const m = port(); v.poster = m ? v.dataset.pm : v.dataset.pd; v.src = m ? v.dataset.m : v.dataset.d; v.preload = 'auto'; try { v.load(); } catch (e) { } }
+  function lock(on) { document.documentElement.style.overflow = on ? 'hidden' : ''; if (window.lenis) { try { on ? lenis.stop() : lenis.start(); } catch (e) { } } }
+  function open(auto) {
+    load(); lastFocus = document.activeElement; f.hidden = false; f.classList.remove('open', 'shut'); requestAnimationFrame(() => f.classList.add('on')); lock(true); started = false;
+    setTimeout(() => go.focus({ preventScroll: true }), 300);
+    if (auto) { let n = 4; cd.textContent = n; clearInterval(timer); timer = setInterval(() => { n--; cd.textContent = n > 0 ? n : ''; if (n <= 0) { clearInterval(timer); play(false); } }, 1000); }
+    else cd.textContent = '';
+  }
+  function play(gesture) {
+    if (started) return; started = true; clearInterval(timer); cd.textContent = ''; S.set('pel-film1', '1');
+    f.classList.add('open'); v.currentTime = 0; v.muted = false;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => { v.muted = true; snd.hidden = false; v.play().catch(() => { }); });
+  }
+  function close() {
+    clearInterval(timer); S.set('pel-film1', '1');
+    f.classList.add('shut'); setTimeout(() => { f.classList.remove('on'); setTimeout(() => { f.hidden = true; try { v.pause(); } catch (e) { } lock(false); window.scrollTo(0, 0); if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true }); }, 600); }, started ? 900 : 0);
+  }
+  go.addEventListener('click', () => play(true));
+  snd.addEventListener('click', () => { v.muted = false; snd.hidden = true; if (v.paused) v.play().catch(() => { }); });
+  f.querySelector('[data-pf-skip]').addEventListener('click', close);
+  addEventListener('keydown', e => { if (!f.hidden && e.key === 'Escape') close(); });
+  v.addEventListener('timeupdate', () => { if (v.duration) prog.style.width = (v.currentTime / v.duration * 100) + '%'; });
+  v.addEventListener('ended', close);
+  document.querySelectorAll('[data-pf-open]').forEach(b => b.addEventListener('click', () => open(false)));
+  // erster Besuch: nach dem Skizzen-Intro automatisch (Vorhang, 4-s-Zähler, dann Film)
+  const q = location.search;
+  if (S.get('pel-film1') || /[?&](nofilm|nointro)/.test(q) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const intro = document.querySelector('.intro');
+  const wait = () => { if (!intro || intro.classList.contains('gone')) setTimeout(() => open(true), 400); else setTimeout(wait, 300); };
+  setTimeout(load, 1500); wait();
+})();
