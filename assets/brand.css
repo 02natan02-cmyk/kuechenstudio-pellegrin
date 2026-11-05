@@ -1,4 +1,11 @@
 
+/* Menü liegt über allem, auch über Planer-Karten, Hinweisen und Mini-3D */
+.menu-open .mnav{z-index:9000}.menu-open .hdr{z-index:9001}
+/* Kopfleiste zwischen Tablet und kleinem Laptop (z. B. iPad quer): eine Zeile, nichts bricht um */
+@media (min-width:901px) and (max-width:1380px){.hdr{gap:12px}.nav a,.hdr-r .btn{white-space:nowrap}.nav a{padding:10px 10px;font-size:14.5px}.nav a::after{left:10px;right:10px}.hdr .brand .plogo{width:236px;margin-left:-10px}}
+@media (min-width:901px) and (max-width:1260px){.hdr-r .status{display:none}}
+@media (min-width:901px) and (max-width:990px){.hdr-r .btn{display:none}}
+@media (min-width:901px) and (max-width:1100px){.nav a{padding:8px 7px;font-size:13.5px}.nav a::after{left:7px;right:7px}.hdr .brand .plogo{width:196px}.hdr-r .btn{padding-inline:14px}}
 /* ===== Pellegrin – echtes Logo 2026 ===== */
 .plogo{display:block;width:100%;height:auto;overflow:visible;--pl-ink:currentColor;--pl-vine:#d5d8bf}
 .plogo .pl-word{fill:var(--pl-ink)}.plogo .pl-sub{transform-box:fill-box;transform-origin:100% 100%;transform:translate(22px,-410px)}@media (max-width:640px){.plogo .pl-sub{transform:translate(22px,-414px) scale(1.4)}}.plogo .pl-sub{fill:var(--pl-subink,var(--pl-ink));opacity:.78}

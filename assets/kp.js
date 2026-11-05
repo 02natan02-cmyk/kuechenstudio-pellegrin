@@ -2303,6 +2303,11 @@
       if (on) apply();
     }
     const q = () => { if (!raf) raf = requestAnimationFrame(upd); };
+    // Gerät gedreht mitten im Planen: quer füllt der Planer genau den Bildschirm – dann direkt dorthin, nicht irgendwo darunter landen
+    let inPl = false; const seen = () => { const r = root.getBoundingClientRect(); inPl = r.top < innerHeight * .5 && r.bottom > innerHeight * .5; };
+    addEventListener('scroll', seen, { passive: true }); seen();
+    const toLand = () => { if (land.matches && inPl) requestAnimationFrame(() => { scrollTo({ top: Math.round(root.getBoundingClientRect().top + scrollY), behavior: 'auto' }); seen(); }); };
+    if (land.addEventListener) land.addEventListener('change', toLand); else if (land.addListener) land.addListener(toLand);
     addEventListener('scroll', q, { passive: true }); addEventListener('resize', q); new MutationObserver(q).observe(H, { attributes: true, attributeFilter: ['class'] });
     bar.addEventListener('click', e => {
       if (e.target.closest('[data-dk-ov]')) { if (K && K.view) { K.view('perspektive'); $$('[data-cam]').forEach(x => x.classList.toggle('on', x.dataset.cam === 'perspektive')); } return; }
