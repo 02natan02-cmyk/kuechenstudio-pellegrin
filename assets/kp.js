@@ -1570,7 +1570,7 @@
   }
   function toast(msg, und) { if (quiet(msg, und)) return; tst.classList.remove('kp-ask'); tst.innerHTML = `<span>${msg}</span>${und ? '<button type="button">Rückgängig</button>' : ''}`; placeToast(); tst.hidden = false; tst.classList.add('on'); clearTimeout(tT); tT = setTimeout(() => { tst.classList.remove('on'); }, und ? 5200 : innerWidth < 1000 ? 3200 : 4200); const b = $('button', tst); if (b) b.onclick = () => { und(); tst.classList.remove('on'); }; }
   // Rückfrage im Toast: nichts passiert, solange nicht „Ja“ getippt wird
-  function ask(msg, yes, fn) { tst.classList.add('kp-ask'); tst.innerHTML = `<span>${msg}</span><span class="kp-askb"><button type="button" data-a="1">${yes}</button><button type="button" data-a="0">Nein</button></span>`; placeToast(); tst.hidden = false; tst.classList.add('on'); clearTimeout(tT); tT = setTimeout(() => tst.classList.remove('on'), 9000); $$('[data-a]', tst).forEach(b => b.onclick = () => { tst.classList.remove('on'); if (b.dataset.a === '1') fn(); }); }
+  function ask(msg, yes, fn, no, noFn) { tst.classList.add('kp-ask'); tst.innerHTML = `<span>${msg}</span><span class="kp-askb"><button type="button" data-a="1">${yes}</button><button type="button" data-a="0">${no || 'Nein'}</button></span>`; placeToast(); tst.hidden = false; tst.classList.add('on'); clearTimeout(tT); tT = setTimeout(() => tst.classList.remove('on'), 9000); $$('[data-a]', tst).forEach(b => b.onclick = () => { tst.classList.remove('on'); if (b.dataset.a === '1') fn(); else if (noFn) noFn(); }); }
   // Handy: Toast unten mittig über den Kamera-Knöpfen der 3D-Bühne (verdeckt nie die „live in 3D“-Pille); sonst über dem Weiter-Knopf
   function placeToast() {
     tst.style.bottom = ''; if (innerWidth >= 1000) return;
@@ -2139,7 +2139,11 @@
   // Live im Raum (AR): wird erst beim Antippen geladen
   let par = null;
   function openAR() { (par || (par = new Promise((res, rej) => { if (window.KPAR) return res(); const s = document.createElement('script'); s.src = 'assets/kp-ar.js?v=' + VER; s.onload = res; s.onerror = () => { par = null; rej(); }; document.head.appendChild(s); }))).then(() => window.KPAR.open()).catch(() => toast('Die Live-Ansicht konnte nicht geladen werden – bitte Seite neu laden.')); }
-  document.addEventListener('click', e => { const b = e.target.closest('[data-kpar-open]'); if (!b) return; e.preventDefault(); openAR(); });
+  // Erst planen, dann in den Raum stellen (Natan 05.11.: „sonst macht es keinen Sinn“) – mit der Beispielküche geht es trotzdem
+  const planned = () => gDirty || root.dataset.hash0 === '1';
+  const go1 = i => { go(i); const st = $('.kp-steps'); if (st && st.scrollIntoView && innerWidth < 1000) root.scrollIntoView({ behavior: RMO ? 'auto' : 'smooth', block: 'start' }); };
+  const firstPlan = go => { if (planned()) return go(); ask('Planen Sie zuerst Ihre Küche – dann stellen wir genau diese in Ihren Raum. Sonst sehen Sie nur unsere Beispielküche.', 'Beispiel ansehen', go, 'Erst planen', () => { go1(1); }); };
+  document.addEventListener('click', e => { const b = e.target.closest('[data-kpar-open]'); if (!b) return; e.preventDefault(); firstPlan(openAR); });
   if (/[?&]ar=1/.test(location.search)) setTimeout(openAR, 1200);
   function openFoto(o) { loadFoto().then(() => window.KPF && window.KPF.open(o || {})).catch(() => { pf = null; toast('Die Foto-Ansicht konnte nicht geladen werden – bitte Seite neu laden.'); }); }
   window.KP = {
@@ -2191,7 +2195,7 @@
       cookTo: (wall, s) => { const r = moveApp(['kf', 'ko'], { wall, s }); if (r.ok && !r.same) change(); return r; },
     },
   };
-  document.addEventListener('click', e => { const b = e.target.closest('[data-kpf-open]'); if (!b) return; e.preventDefault(); openFoto({ sample: b.hasAttribute('data-kpf-sample') }); });
+  document.addEventListener('click', e => { const b = e.target.closest('[data-kpf-open]'); if (!b) return; e.preventDefault(); const sm = b.hasAttribute('data-kpf-sample'); sm ? openFoto({ sample: true }) : firstPlan(() => openFoto({})); });
 
   /* ---------------- Nicht aus Versehen rausfliegen ---------------- */
   // Sobald jemand selbst geplant hat: Rückfrage beim Zurückwischen, bei Links weg vom Planer und beim Schließen des Tabs.
