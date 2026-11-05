@@ -885,3 +885,31 @@ html.kp-lv-on{overflow:hidden}
 }
 /* Schmale PC-/Tablet-Bühne (iPad quer): Aktionsknöpfe oben links unter dem Live-Schild, Ansichten unten – nichts überlappt */
 @media (min-width:1000px) and (max-width:1399px){.kp-acts{left:12px;top:50px;bottom:auto;flex-direction:column;align-items:flex-start;gap:6px}.kp-acts button{padding:6px 11px 6px 8px;font-size:12px}}
+/* ---- Insel: Reiter Kochseite | Raumseite | Größe & Lage (05.11.) ---- */
+.kp-isl-hd{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap}
+.kp-isl-hd>b{font:600 17px var(--serif)}
+.kp-isl-tabs{display:flex;gap:4px;padding:4px;border-radius:999px;background:#f1ece3;box-shadow:inset 0 0 0 1px var(--line);max-width:100%}
+.kp-isl-tabs button{flex:1 1 auto;padding:8px 14px;border:0;border-radius:999px;background:none;font:600 13px var(--sans);color:var(--mute);cursor:pointer;white-space:nowrap;transition:background .25s,color .25s,box-shadow .25s}
+.kp-isl-tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 0 var(--line),0 6px 14px -10px rgba(0,0,0,.45)}
+.kp-isl .kp-isl-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kp-isl .kp-isl-s{grid-template-columns:36px 1fr 36px!important;row-gap:2px}.kp-isl .kp-isl-s small{grid-column:1/-1}
+.kp-isl .kp-isl-side2{animation:kpIslEd .3s cubic-bezier(.2,1,.3,1)}
+.kp-isl-ok{margin:0;padding:8px 10px;border-radius:10px;background:#eef4e6;font-size:12px;line-height:1.4;color:#3d5a24}
+.kp-isl-w button[data-isround]{margin-left:6px;padding:5px 10px;border-radius:999px;border:0;background:var(--copper,#7f7d4c);color:#fff;font:600 12px var(--sans);cursor:pointer}
+@media (max-width:999px){
+  .kp-isl{padding:12px 12px 14px;gap:10px}
+  .kp-isl-hd{flex-direction:column;align-items:stretch;gap:8px}.kp-isl-hd>b{font-size:15px}
+  .kp-isl-tabs button{padding:9px 6px;font-size:12.5px;min-height:38px}
+  .kp-isl .kp-isl-g{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kp-isl .kp-isl-side2{padding:10px}
+  .kp-isl-sv{max-height:150px}
+  .kp-isl-edr>button{padding:9px 12px;min-height:38px}
+}
+/* Insel wie zwei Wände: Karte unter der Ansicht (05.11.) */
+.kp-isl-hd{flex-direction:column;align-items:flex-start;gap:4px}
+.kp-isl-hd .kp-isl-h{margin:0;font-size:12px;color:var(--mute);line-height:1.4}
+.kp-isl-pre button{white-space:nowrap}
+.kp-isl-gd{border-radius:12px;background:#faf7f2;box-shadow:inset 0 0 0 1px var(--line);padding:0 12px}
+.kp-isl-gd>summary{cursor:pointer;list-style:none;padding:11px 0;font:600 13px var(--sans);color:var(--ink)}
+.kp-isl-gd>summary::-webkit-details-marker{display:none}.kp-isl-gd>summary::after{content:" ▾";color:var(--mute)}.kp-isl-gd[open]>summary::after{content:" ▴"}
+.kp-isl-gd[open]{padding-bottom:12px}.kp-isl-gd .kp-isl-g{margin-bottom:8px}

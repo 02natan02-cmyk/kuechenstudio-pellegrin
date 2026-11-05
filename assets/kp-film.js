@@ -24,7 +24,7 @@
   ];
   // Echte Aufnahmen (PC oder Handy, je nach Bildschirm), wenn die Seite sie mitbringt: data-filmclips="img/kpfilm/"
   const CB = root.dataset.filmclips;
-  if (CB) {
+  if (false) {
     const mob = matchMedia('(max-width:760px), (max-aspect-ratio: 4/5)').matches, dev = mob ? 'm' : 'd';
     const CL = [
       ['01_form', 'Schritt 1', 'Form wählen', 'Zeile, L, U oder Insel – ein Tipp, und die Grundausstattung steht.'],
@@ -91,12 +91,72 @@
     const e0 = el; el = null; e0.classList.remove('in'); document.documentElement.classList.remove('kpfm-on'); setTimeout(() => e0.remove(), RM ? 0 : 360);
     if (last && last.focus) try { last.focus({ preventScroll: true }); } catch (e) { }
   }
+  /* ---- Kapitel-Modus (Natan 05.11.): vier Kapitel = vier Planer-Schritte. Oben läuft das Handy als durchgehende echte Aufnahme,
+     darunter die Schritte als kurze Liste – der aktuelle leuchtet mit, erledigte bekommen einen Haken. MP4 (läuft in jedem Browser). */
+  function kapitel() {
+    const KAP = [
+      { n: 'k1_raum', h: 'Form & Raum', st: [['Form wählen', 'Zeile, L, U oder Insel antippen.'], ['Raumgröße einstellen', 'Breite und Tiefe am Regler ziehen.'], ['Wasser und Strom eintragen', 'Anschluss antippen und im Grundriss an die echte Stelle ziehen.'], ['Fenster an die richtige Stelle', 'Fenster im Grundriss mit dem Finger verschieben.']] },
+      { n: 'k2_einrichten', h: 'Einrichten', st: [['Schrank antippen – er kommt in die Küche', 'Oder direkt in die Wand ziehen.'], ['Verschieben mit den Pfeilen', 'Schrank antippen, dann ← oder →.'], ['Ändern: Breite und Art', '− und + für die Breite, darunter die Art.'], ['Löschen – mit Rückgängig', '„Entfernen“ – ein Tipp auf „Rückgängig“ holt ihn zurück.']] },
+      { n: 'k3_design', h: 'Design', st: [['Farbwelt wählen', 'Ein Tipp färbt die ganze Küche.'], ['Fronten und Griffe', 'Jede Farbe ist möglich.'], ['Eigenes Foto als Rückwand', 'Motiv wählen, Foto hochladen – fertig.']] },
+      { n: 'k4_senden', h: 'Pläne & Anfrage', st: [['Pläne ansehen', 'Grundriss, Wände und Installationsplan.'], ['Name und E-Mail eintragen', 'Gern auch Fotos oder Ihr Aufmaß dazu.'], ['Abschicken – fertig', `Ihre Planung geht direkt an ${esc(P)}.`]] },
+    ];
+    let el = null, c = 0, last = null, v = null, mk = {}, raf = 0;
+    const load = k => mk[k.n] ? Promise.resolve(mk[k.n]) : fetch(`${CB}k/${k.n}.json`).then(r => r.json()).then(j => (mk[k.n] = (j.marks || []).map(m => m[1] / 1000))).catch(() => (mk[k.n] = []));
+    function build() {
+      el = document.createElement('div'); el.className = 'kpfm kpk'; el.setAttribute('role', 'dialog'); el.tabIndex = -1; el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', "So geht's – der Küchenplaner in vier Schritten");
+      el.innerHTML = `<div class="kpk-top"><div class="kpk-tabs" role="tablist">${KAP.map((k, j) => `<button type="button" role="tab" data-k="${j}"><b>${j + 1}</b><span>${k.h}</span><i><u></u></i></button>`).join('')}</div><button type="button" class="kpfm-skip kpk-skip" data-fm-skip>Überspringen</button></div>
+<div class="kpk-main"><div class="kpk-ph"><video muted playsinline preload="auto"></video><span class="kpk-pz" aria-hidden="true">▶</span></div>
+<div class="kpk-txt"><p class="kpfm-k" data-kk></p><h2 data-kh></h2><ol class="kpk-st" data-kst></ol></div>
+<div class="kpk-end" hidden><svg viewBox="0 0 320 230" aria-hidden="true">${S_END}</svg><p class="kpfm-k">Keine Sorge</p><h2>Die Feinheiten erledigt ${esc(P)}.</h2><p class="kpfm-p">Ihr Küchenprofi ${esc(P)} schaut sich Ihre Planung persönlich an – ${esc(ERF)} – und macht vor Ort im Studio daraus eine Küche, die passt.</p></div></div>
+<div class="kpfm-nav"><button type="button" data-fm-prev aria-label="Zurück">‹</button><button type="button" class="kpfm-go" data-fm-go>Weiter</button><button type="button" data-fm-next aria-label="Weiter">›</button></div>`;
+      document.body.appendChild(el); v = el.querySelector('video');
+      el.addEventListener('click', e => {
+        if (e.target.closest('[data-fm-skip]')) return close();
+        const t = e.target.closest('[data-k]'); if (t) return show(+t.dataset.k);
+        if (e.target.closest('[data-fm-prev]')) return show(Math.max(0, c - 1));
+        if (e.target.closest('[data-fm-next],[data-fm-go]')) return c >= KAP.length ? close() : show(c + 1);
+        const li = e.target.closest('[data-st]'); if (li && mk[KAP[c].n]) { const m = mk[KAP[c].n][+li.dataset.st]; if (m != null) { v.currentTime = Math.max(0, m - .15); v.play().catch(() => { }); } return; }
+        if (e.target.closest('.kpk-ph')) { if (v.paused) v.play().catch(() => { }); else v.pause(); el.classList.toggle('paused', v.paused); }
+      });
+      el.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (e.key === 'ArrowRight') show(Math.min(KAP.length, c + 1)); else if (e.key === 'ArrowLeft') show(Math.max(0, c - 1)); });
+      v.addEventListener('ended', () => { if (el && c < KAP.length) setTimeout(() => { if (el && v.ended) show(c + 1); }, 700); });
+      v.addEventListener('play', () => el && el.classList.remove('paused')); v.addEventListener('pause', () => el && !v.ended && el.classList.add('paused'));
+    }
+    function tick() {
+      raf = requestAnimationFrame(tick); if (!el || c >= KAP.length) return;
+      const k = KAP[c], m = mk[k.n] || [], t = v.currentTime || 0, d = v.duration || 0;
+      let a = 0; m.forEach((x, j) => { if (t >= x - .05) a = j; });
+      el.querySelectorAll('[data-st]').forEach((li, j) => { li.classList.toggle('on', j === a); li.classList.toggle('done', j < a || (v.ended && j === a)); const n = j < m.length - 1 ? m[j + 1] : d; if (j === a && n > m[j]) li.style.setProperty('--p', Math.min(1, (t - m[j]) / (n - m[j])).toFixed(3)); });
+      const tb = el.querySelectorAll('.kpk-tabs u')[c]; if (tb && d) tb.style.width = (t / d * 100) + '%';
+    }
+    function show(j) {
+      c = j; const end = j >= KAP.length;
+      el.querySelectorAll('[data-k]').forEach((b, i) => { b.classList.toggle('on', i === j); b.classList.toggle('done', i < j); b.setAttribute('aria-selected', i === j); const u = b.querySelector('u'); if (u) u.style.width = i < j ? '100%' : '0%'; });
+      el.classList.toggle('end', end); el.querySelector('.kpk-end').hidden = !end; el.querySelector('.kpk-ph').hidden = end; el.querySelector('.kpk-txt').hidden = end;
+      el.querySelector('[data-fm-go]').textContent = end ? 'Jetzt loslegen' : j === KAP.length - 1 ? 'Fertig' : 'Nächster Schritt';
+      if (end) { try { v.pause(); } catch (e) { } return; }
+      const k = KAP[j];
+      el.querySelector('[data-kk]').textContent = `Schritt ${j + 1} von ${KAP.length}`; el.querySelector('[data-kh]').textContent = k.h;
+      el.querySelector('[data-kst]').innerHTML = k.st.map(([h, s2], i) => `<li data-st="${i}"><i aria-hidden="true">${i + 1}</i><span><b>${esc(h)}</b><small>${s2}</small></span></li>`).join('');
+      v.poster = `${CB}k/${k.n}.jpg`; v.src = `${CB}k/${k.n}.mp4`; try { v.load(); } catch (e) { }
+      load(k).then(() => { if (el && c === j && !RM) v.play().catch(() => el.classList.add('paused')); });
+      const nx = KAP[j + 1]; if (nx) { load(nx); const l = document.createElement('link'); l.rel = 'preload'; l.as = 'video'; l.href = `${CB}k/${nx.n}.mp4`; document.head.appendChild(l); }
+    }
+    function open() { if (el) return; last = document.activeElement; build(); document.documentElement.classList.add('kpfm-on'); requestAnimationFrame(() => { el.classList.add('in'); show(0); el.focus({ preventScroll: true }); tick(); }); }
+    function close() {
+      if (!el) return; cancelAnimationFrame(raf); try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { }
+      const e0 = el; el = null; try { v.pause(); } catch (e) { } e0.classList.remove('in'); document.documentElement.classList.remove('kpfm-on'); setTimeout(() => e0.remove(), RM ? 0 : 360);
+      if (last && last.focus) try { last.focus({ preventScroll: true }); } catch (e) { }
+    }
+    return { open, close };
+  }
+  const API = CB ? kapitel() : { open, close };
   // Knopf „So geht's“ im Planer-Kopf
   const hr = root.querySelector('.kp-hr');
-  if (hr) { const b = document.createElement('button'); b.type = 'button'; b.className = 'kp-film-b'; b.setAttribute('aria-label', "So geht's – kurzer Film"); b.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.2 6.6l5 3.4-5 3.4z" fill="currentColor"/></svg><span>So geht\'s</span>'; b.addEventListener('click', open); hr.insertBefore(b, hr.firstChild); }
-  window.KPFilm = { open, close };
+  if (hr) { const b = document.createElement('button'); b.type = 'button'; b.className = 'kp-film-b'; b.setAttribute('aria-label', "So geht's – kurzer Film"); b.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.2 6.6l5 3.4-5 3.4z" fill="currentColor"/></svg><span>So geht\'s</span>'; b.addEventListener('click', () => API.open()); hr.insertBefore(b, hr.firstChild); }
+  window.KPFilm = API;
   // Erster Besuch: von selbst – nicht bei einem geteilten Plan im Link, nach dem Absenden, mit ?nointro oder ?foto
   let seen = null; try { seen = localStorage.getItem(KEY); } catch (e) { seen = '1'; }
   const q = location.search;
-  if (!seen && !root.dataset.hash0 && !/[?&](nointro|gesendet|foto)=?/.test(q)) setTimeout(open, 600);
+  if (!seen && !root.dataset.hash0 && !/[?&](nointro|gesendet|foto)=?/.test(q)) setTimeout(() => API.open(), 600);
 })();
