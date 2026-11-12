@@ -1166,6 +1166,7 @@
   const ICON_R = ICON_L.replace('M15 4.5L4.5 10L15 15.5', 'M5 4.5L15.5 10L5 15.5');
   function stepW(ws, cur, dir) { if (dir > 0) return ws.find(v => v > cur) ?? cur; const lo = ws.filter(v => v < cur); return lo.length ? lo[lo.length - 1] : cur; }
   function renderPop() {
+    if (drag && drag.on) { pop.hidden = true; return; } /* beim Ziehen frei sehen, Karte erst beim Loslassen */
     if (eqSel) return renderEqPop();
     pop.classList.remove('kp-pop-eq');
     if (selOp && opById(selOp)) return renderOpPop();
